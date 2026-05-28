@@ -1,0 +1,86 @@
+{
+  "app": {
+    "name": "Jobopslags-generator",
+    "tagline": "Evidence-based job postings"
+  },
+  "auth": {
+    "login": "Log in",
+    "logout": "Log out",
+    "register": "Create account",
+    "email": "Email address",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "loginTitle": "Welcome back",
+    "registerTitle": "Create your account",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account?",
+    "invalidCredentials": "Invalid email or password",
+    "passwordMinLength": "Password must be at least 8 characters"
+  },
+  "dashboard": {
+    "title": "Your projects",
+    "newProject": "New project",
+    "tier1Title": "Quick Job Post",
+    "tier1Desc": "3–5 minutes. Job title + bullets → 2 variants → download.",
+    "tier2Title": "Full Recruitment Project",
+    "tier2Desc": "30–60 minutes. Full workflow → job analysis, posting, candidate profile, interview guide.",
+    "noProjects": "No projects yet. Create your first job posting.",
+    "lastUpdated": "Last updated",
+    "status": {
+      "draft": "Draft",
+      "completed": "Completed",
+      "archived": "Archived"
+    }
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Connection error. Please check your internet connection.",
+    "unauthorized": "You need to log in to access this page.",
+    "forbidden": "You do not have access to this resource.",
+    "notFound": "Page not found.",
+    "boundary": "Something went wrong on this page.",
+    "boundaryAction": "Reload page"
+  },
+  "admin": {
+    "title": "Admin Dashboard",
+    "tabs": {
+      "business": "Business",
+      "operational": "Operational",
+      "product": "Product insights"
+    },
+    "dateRange": {
+      "label": "Period",
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days"
+    },
+    "business": {
+      "totalUsers": "Total users",
+      "activeUsers": "Active users",
+      "newSignups": "New signups",
+      "paidUsers": "Paid users",
+      "mrr": "MRR",
+      "totalProjects": "Total projects",
+      "completionRate": "Completion rate",
+      "topUsers": "Top users by project count"
+    },
+    "operational": {
+      "aiCostTotal": "Total AI cost",
+      "aiCostPerProject": "Avg. cost per project",
+      "latencyP50": "Latency P50",
+      "latencyP95": "Latency P95",
+      "topErrors": "Top errors"
+    },
+    "product": {
+      "biasRules": "Bias rule triggers",
+      "resolveRate": "Resolve rate",
+      "funnelDropoff": "Tier 2 funnel",
+      "downloadRate": "Download rate"
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "admin": "Admin",
+    "account": "Account"
+  }
+}
