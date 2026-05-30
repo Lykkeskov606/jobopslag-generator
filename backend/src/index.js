@@ -47,13 +47,18 @@ app.use(require('./middleware/errorHandler').errorHandler);
 
 // Start services
 const { startMetricsCron } = require('./services/metrics');
-if (process.env.NODE_ENV !== 'test') {
-  startMetricsCron();
-}
+const { migrate } = require('./db/migrate');
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
-});
+
+(async () => {
+  if (process.env.NODE_ENV !== 'test') {
+    await migrate();
+    startMetricsCron();
+  }
+  app.listen(PORT, () => {
+    console.log(`Backend running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+  });
+})();
 
 module.exports = app;

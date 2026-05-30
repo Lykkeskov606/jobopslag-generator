@@ -31,11 +31,17 @@ async function migrate() {
     console.log(`Done: ${file}`);
   }
 
-  await pool.end();
   console.log('All migrations complete');
 }
 
-migrate().catch((err) => {
-  console.error('Migration failed:', err);
-  process.exit(1);
-});
+module.exports = { migrate };
+
+// Allow direct CLI execution: node migrate.js
+if (require.main === module) {
+  migrate()
+    .then(() => pool.end())
+    .catch((err) => {
+      console.error('Migration failed:', err);
+      process.exit(1);
+    });
+}
