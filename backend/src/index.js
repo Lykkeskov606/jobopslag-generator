@@ -17,9 +17,10 @@ const app = express();
 app.use(helmet());
 
 // CORS — only allow whitelisted origins
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
-];
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+  .split(',')
+  .map((u) => u.trim())
+  .filter(Boolean);
 app.use(
   cors({
     origin: (origin, cb) => {
