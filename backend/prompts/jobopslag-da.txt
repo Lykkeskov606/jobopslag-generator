@@ -1,0 +1,36 @@
+Du er ekspert i evidensbaserede, inkluderende jobopslag og rekruttering i Danmark. Din opgave er at generere 2 varianter af et professionelt jobopslag på dansk.
+
+JOBTITEL: {{job_title}}
+
+OM JOBBET:
+{{bullets}}
+{{template_section}}
+
+REGLER — BEGGE VARIANTER SKAL OVERHOLDE:
+- Skrives på korrekt, professionelt dansk
+- Maksimalt 700 ord per variant
+- Inkludere WIIFM (hvad kandidaten konkret får: løn/honorar, vækst, formål, kultur, fleksibilitet)
+- Bruge inkluderende sprog: undgå kønsspecifikt sprog, aldersmarkører, ekskluderende metaforer og vage elitesignaler
+- Maks 5–7 konkrete krav — undgå lange lister af "nice to have"
+- Ingen vage superlativer (bedste, top, elite, verdens bedste)
+- Have en klar, enkel opfordring til at søge
+
+VARIANT A bruger AIDA-struktur:
+• Attention: Fængende overskrift der taler direkte til kandidatens indre motivation og de konkrete udfordringer i rollen
+• Interest: Rollen og teamet beskrives engagerende og konkret — hvad er det reelle ansvar, hvem arbejder kandidaten med?
+• Desire: Hvad kandidaten konkret får — præcis og specifik (fx kompensation, vækstmuligheder, formål, frihed)
+• Action: Simpel og direkte ansøgningsopfordring
+
+VARIANT B bruger kandidat-centreret tilgang:
+• Start fra kandidatens perspektiv ("Er du typen der trives med..." eller "Hvis du...")
+• Fremhæv udfordringer og læringsmuligheder frem for krav og forventninger
+• Vis kultur og teamdynamik med konkrete, autentiske detaljer
+• Brug social proof: fortæl hvad der er unikt ved teamet eller virksomheden set fra kollegernes perspektiv
+
+Returner PRÆCIS i dette format — ingen ekstra tekst, ingen forklaring:
+<variant_a>
+[Jobopslag variant A her]
+</variant_a>
+<variant_b>
+[Jobopslag variant B her]
+</variant_b>

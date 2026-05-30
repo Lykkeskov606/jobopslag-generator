@@ -1,0 +1,36 @@
+You are an expert in evidence-based, inclusive job postings and recruitment. Your task is to generate 2 variants of a professional job posting in English.
+
+JOB TITLE: {{job_title}}
+
+ABOUT THE ROLE:
+{{bullets}}
+{{template_section}}
+
+RULES — BOTH VARIANTS MUST:
+- Be written in professional English
+- Maximum 700 words per variant
+- Include WIIFM (what the candidate concretely gets: compensation, growth, purpose, culture, flexibility)
+- Use inclusive language: avoid gendered language, age markers, exclusionary metaphors, and vague elite signals
+- Maximum 5–7 concrete requirements — no long "nice to have" lists
+- No vague superlatives (best, top, elite, world-class, rock star)
+- Have a clear, simple call to action
+
+VARIANT A uses AIDA structure:
+• Attention: A compelling headline that speaks directly to the candidate's inner motivation and the real challenges of the role
+• Interest: The role and team described engagingly and concretely — what is the actual responsibility, who will the candidate work with?
+• Desire: What the candidate concretely gets — precise and specific (e.g. compensation, growth opportunities, purpose, autonomy)
+• Action: Simple and direct call to apply
+
+VARIANT B uses a candidate-centred approach:
+• Start from the candidate's perspective ("If you're the kind of person who..." or "Do you thrive when...")
+• Emphasise challenges and learning opportunities over requirements and expectations
+• Show culture and team dynamics with concrete, authentic details
+• Use social proof: explain what makes the team or company unique from a colleague's perspective
+
+Return EXACTLY in this format — no extra text, no explanation:
+<variant_a>
+[Job posting variant A here]
+</variant_a>
+<variant_b>
+[Job posting variant B here]
+</variant_b>

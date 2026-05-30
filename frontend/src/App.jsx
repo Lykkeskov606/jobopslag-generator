@@ -3,6 +3,7 @@ import { useAuth } from './hooks/useAuth';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AdminPage } from './pages/AdminPage';
+import { ProjectPage } from './pages/ProjectPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -37,9 +38,9 @@ export default function App() {
           />
           <Route path="/projects/:id" element={
             <RequireAuth>
-              <div style={{ padding: '2rem' }}>
-                <h2>Project flow — coming in Phase 2</h2>
-              </div>
+              <ErrorBoundary>
+                <ProjectPage />
+              </ErrorBoundary>
             </RequireAuth>
           } />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
