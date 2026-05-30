@@ -63,7 +63,7 @@ async function callClaude(userMessage, promptFile, projectId, userId, stepNumber
   }
 }
 
-async function generateJobPosting({ jobTitle, bullets, language, templateContent, projectId, userId }) {
+async function generateJobPosting({ jobTitle, bullets, language, templateContent, location, startDate, employmentType, projectId, userId }) {
   const promptFile = `jobopslag-${language}.txt`;
   const template = readPrompt(promptFile);
   const bulletsText = bullets.map((b) => `• ${b}`).join('\n');
@@ -71,10 +71,20 @@ async function generateJobPosting({ jobTitle, bullets, language, templateContent
     ? `\n${language === 'da' ? 'VIRKSOMHEDENS SKABELON/TONE' : 'COMPANY TEMPLATE/TONE'}:\n${templateContent}`
     : '';
 
+  // Build context lines — only include fields that have a value
+  const isDa = language === 'da';
+  const contextParts = [
+    location       && `${isDa ? 'Lokation'          : 'Location'}: ${location}`,
+    startDate      && `${isDa ? 'Startdato'         : 'Start date'}: ${startDate}`,
+    employmentType && `${isDa ? 'Ansættelsestype'   : 'Employment type'}: ${employmentType}`,
+  ].filter(Boolean);
+  const contextLines = contextParts.length ? contextParts.join('\n') : '';
+
   const prompt = fillTemplate(template, {
     job_title: jobTitle,
     bullets: bulletsText,
     template_section: templateSection,
+    context_lines: contextLines,
   });
 
   const text = await callClaude(prompt, promptFile, projectId, userId, 2);

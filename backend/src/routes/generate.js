@@ -23,6 +23,9 @@ const tier1Schema = z.object({
   job_title: z.string().min(1).max(200),
   bullets: z.array(z.string().min(1).max(500)).min(1).max(10),
   language: z.enum(['da', 'en']),
+  location: z.string().max(100).optional().default(''),
+  start_date: z.string().max(50).optional().default(''),
+  employment_type: z.string().max(50).optional().default(''),
 });
 
 router.use(requireAuth);
@@ -76,7 +79,7 @@ router.post('/tier1', upload.single('template'), async (req, res, next) => {
     if (!parsed.success) {
       return res.status(400).json({ error: 'Invalid input', details: parsed.error.issues });
     }
-    const { project_id, job_title, bullets, language } = parsed.data;
+    const { project_id, job_title, bullets, language, location, start_date, employment_type } = parsed.data;
 
     const { rows: member } = await db.query(
       `SELECT 1 FROM projects p
@@ -105,7 +108,7 @@ router.post('/tier1', upload.single('template'), async (req, res, next) => {
        VALUES ($1, 2, $2, NOW())
        ON CONFLICT (project_id, step_number)
        DO UPDATE SET input_data = $2, updated_at = NOW()`,
-      [project_id, JSON.stringify({ job_title, bullets, language, has_template: !!templateContent })]
+      [project_id, JSON.stringify({ job_title, bullets, language, location, start_date, employment_type, has_template: !!templateContent })]
     );
 
     // Sync project language
@@ -117,6 +120,7 @@ router.post('/tier1', upload.single('template'), async (req, res, next) => {
     // Generate with Claude
     const { variant_a, variant_b } = await generateJobPosting({
       jobTitle: job_title, bullets, language, templateContent,
+      location, startDate: start_date, employmentType: employment_type,
       projectId: project_id, userId: req.user.id,
     });
 

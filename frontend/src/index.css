@@ -635,7 +635,56 @@ body {
   gap: 1rem;
 }
 
+/* Inline bias warnings (show as user types) */
+.bullet-item { display: flex; flex-direction: column; gap: 0; }
+.inline-bias-list { display: flex; flex-direction: column; gap: 0.25rem; margin: 0.25rem 0 0.375rem 1.5rem; }
+.inline-bias {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.45rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  border-left: 3px solid;
+}
+.inline-bias-high   { background: #fff1f1; border-color: #fca5a5; }
+.inline-bias-medium { background: #fffbeb; border-color: #fcd34d; }
+.inline-bias-low    { background: #f0fdf4; border-color: #86efac; }
+.inline-bias-label  { font-weight: 600; color: var(--text); }
+.inline-bias-matches { font-style: italic; color: var(--danger); }
+.inline-bias-tip    { color: var(--text-muted); }
+
+/* Form row for 3-column fields */
+.form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+.form-col { margin-bottom: 0; }
+select.form-input { cursor: pointer; }
+
+/* Variant description */
+.variant-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; font-weight: 400; }
+
+/* Job posting preview renderer */
+.posting-preview { font-size: 0.875rem; line-height: 1.7; color: var(--text); }
+.preview-spacer  { height: 0.6rem; }
+.preview-heading {
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin: 0.9rem 0 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+.preview-paragraph { margin-bottom: 0.45rem; }
+.preview-bullet {
+  display: flex;
+  gap: 0.45rem;
+  margin-bottom: 0.2rem;
+  padding-left: 0.1rem;
+}
+.preview-bullet-dot { flex-shrink: 0; color: var(--primary); line-height: 1.7; }
+
 @media (max-width: 700px) {
   .variants-grid { grid-template-columns: 1fr; }
   .step-label { display: none; }
+  .form-row { grid-template-columns: 1fr; }
 }
