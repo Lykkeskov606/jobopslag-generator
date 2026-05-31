@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { BusinessTab } from './tabs/BusinessTab';
 import { OperationalTab } from './tabs/OperationalTab';
 import { ProductTab } from './tabs/ProductTab';
+import { ProjectsTab } from './tabs/ProjectsTab';
 
-const TABS = ['business', 'operational', 'product'];
+const TABS = ['business', 'operational', 'product', 'projects'];
 const DAY_OPTIONS = [7, 30, 90];
 
 export function AdminDashboard() {
@@ -46,6 +47,7 @@ export function AdminDashboard() {
         {activeTab === 'business' && <BusinessTab days={days} />}
         {activeTab === 'operational' && <OperationalTab days={days} />}
         {activeTab === 'product' && <ProductTab days={days} />}
+        {activeTab === 'projects' && <ProjectsTab />}
       </div>
     </div>
   );

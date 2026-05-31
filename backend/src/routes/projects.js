@@ -128,4 +128,23 @@ router.patch('/:id', async (req, res, next) => {
   }
 });
 
+// DELETE /api/projects/:id — owner or superadmin can delete
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const isSuperAdmin = req.user.role === 'superadmin';
+
+    const { rows } = await db.query(
+      `DELETE FROM projects
+       WHERE id = $1 AND ($2 OR owner_id = $3)
+       RETURNING id`,
+      [req.params.id, isSuperAdmin, req.user.id]
+    );
+
+    if (rows.length === 0) return res.status(404).json({ error: 'Project not found' });
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

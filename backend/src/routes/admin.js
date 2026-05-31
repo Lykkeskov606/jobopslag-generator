@@ -196,4 +196,22 @@ router.post('/compute-metrics', async (req, res, next) => {
   }
 });
 
+// GET /api/admin/projects — list all projects for admin management
+router.get('/projects', async (req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT p.id, p.name, p.tier, p.status, p.output_language,
+              p.completion_step, p.created_at, p.updated_at,
+              u.email AS owner_email
+       FROM projects p
+       JOIN users u ON u.id = p.owner_id
+       ORDER BY p.updated_at DESC
+       LIMIT 500`
+    );
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

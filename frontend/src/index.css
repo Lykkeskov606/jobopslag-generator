@@ -151,6 +151,57 @@ body {
 .project-name { font-weight: 500; flex: 1; }
 .project-meta { font-size: 0.8rem; color: var(--text-muted); }
 
+.delete-project-btn {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--danger);
+  background: transparent;
+  border: 1px solid #fca5a5;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.delete-project-btn:hover {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.admin-delete-btn {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  color: var(--danger);
+  background: transparent;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+.admin-delete-btn:hover { background: var(--danger); color: white; border-color: var(--danger); }
+
+.admin-projects-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.admin-projects-header h3 { margin: 0; }
+.admin-search {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  outline: none;
+  width: 220px;
+}
+.admin-search:focus { border-color: var(--primary); }
+.admin-owner-email { font-size: 0.8rem; color: var(--text-muted); }
+
 .project-status {
   font-size: 0.75rem;
   padding: 2px 8px;

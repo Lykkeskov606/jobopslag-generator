@@ -22,10 +22,20 @@ export function DashboardPage() {
     try {
       const name = tier === 1 ? 'Quick Job Post' : 'Full Recruitment Project';
       const { data } = await api.post('/projects', { name, tier });
-      // Phase 2 will route to actual project flow
       navigate(`/projects/${data.id}`);
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  async function handleDeleteProject(e, id, name) {
+    e.stopPropagation();
+    if (!window.confirm(`Slet projektet "${name}"?\n\nDenne handling kan ikke fortrydes.`)) return;
+    try {
+      await api.delete(`/projects/${id}`);
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+    } catch {
+      alert('Sletning fejlede — prøv igen.');
     }
   }
 
@@ -80,6 +90,14 @@ export function DashboardPage() {
                   Tier {p.tier} · {p.output_language.toUpperCase()} ·{' '}
                   {t('dashboard.lastUpdated')}: {new Date(p.updated_at).toLocaleDateString()}
                 </span>
+                <button
+                  type="button"
+                  className="delete-project-btn"
+                  onClick={(e) => handleDeleteProject(e, p.id, p.name)}
+                  title="Slet projekt"
+                >
+                  Slet
+                </button>
               </li>
             ))}
           </ul>

@@ -46,7 +46,8 @@
     "tabs": {
       "business": "Business",
       "operational": "Operational",
-      "product": "Product insights"
+      "product": "Product insights",
+      "projects": "Projects"
     },
     "dateRange": {
       "label": "Period",

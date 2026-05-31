@@ -18,6 +18,8 @@ export function useAuth() {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     setUser(null);
+    // Full navigation clears all component state — no shared context needed
+    window.location.replace('/login');
   }, []);
 
   useEffect(() => {
