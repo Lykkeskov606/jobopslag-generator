@@ -721,7 +721,13 @@ select.form-input { cursor: pointer; }
 }
 .checklist-item-meta { display: flex; flex-direction: column; gap: 0.15rem; }
 .checklist-item-label { font-size: 0.875rem; font-weight: 600; color: var(--text); }
-.checklist-item-question { font-size: 0.8rem; color: var(--text-muted); }
+.checklist-item-why {
+  font-size: 0.78rem;
+  color: #2563eb;
+  font-style: italic;
+  line-height: 1.4;
+  margin-top: 0.1rem;
+}
 
 .checklist-skip-label {
   display: flex;

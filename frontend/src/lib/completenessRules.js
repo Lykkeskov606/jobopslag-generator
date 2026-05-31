@@ -2,6 +2,9 @@
 // Analyses job title + bullets + optional fields and returns the checks
 // whose content is NOT already present in the user's input.
 //
+// Each check includes a 'why' field grounded in candidate psychology —
+// this is shown in the UI so the recruiter understands the value of filling it in.
+//
 // Shared by Tier 1 and Tier 2 — do not add tier-specific logic here.
 
 export const COMPLETENESS_CHECKS = [
@@ -11,9 +14,9 @@ export const COMPLETENESS_CHECKS = [
       da: 'Teamstørrelse og samarbejde',
       en: 'Team size and collaboration',
     },
-    question: {
-      da: 'Hvor mange er i teamet? Hvem samarbejder kandidaten tæt med?',
-      en: 'How many people are on the team? Who will the candidate work closely with?',
+    why: {
+      da: 'Kandidater vil vide hvem de arbejder med — det påvirker beslutningen mere end titlen.',
+      en: 'Candidates want to know who they\'ll work with — it influences their decision more than the title.',
     },
     placeholder: {
       da: 'fx: 6-personers team, tæt samarbejde med produkt og design',
@@ -30,12 +33,12 @@ export const COMPLETENESS_CHECKS = [
       da: 'Rapportering og ledelsesstruktur',
       en: 'Reporting structure',
     },
-    question: {
-      da: 'Hvem rapporterer kandidaten til? Hvad er ledelsesstilen?',
-      en: 'Who does the candidate report to? What is the management style?',
+    why: {
+      da: 'Hvem man refererer til afslører reel indflydelse og karrierevej — det er afgørende for ambitiøse kandidater.',
+      en: 'Who you report to reveals real influence and career trajectory — critical for ambitious candidates.',
     },
     placeholder: {
-      da: 'fx: rapporterer til Head of Engineering, autonomt arbejde',
+      da: 'fx: rapporterer til Head of Engineering, høj autonomi',
       en: 'e.g. reports to the Head of Engineering, high autonomy',
     },
     detect: {
@@ -49,9 +52,9 @@ export const COMPLETENESS_CHECKS = [
       da: 'Arbejdsform (remote / hybrid / kontor)',
       en: 'Work arrangement (remote / hybrid / office)',
     },
-    question: {
-      da: 'Kan man arbejde remote? Hybrid? Fuld tid på kontoret?',
-      en: 'Is remote work possible? Hybrid? Full-time on site?',
+    why: {
+      da: 'Remote/hybrid er et af de hyppigst stillede spørgsmål fra kandidater i dag. Tvetydighed øger frafald.',
+      en: 'Remote/hybrid is one of the most frequently asked questions from candidates today. Ambiguity increases drop-off.',
     },
     placeholder: {
       da: 'fx: hybrid (2 dage hjemme), kontor i København',
@@ -61,7 +64,6 @@ export const COMPLETENESS_CHECKS = [
       da: /\bremote\b|\bhybrid\b|\bhjemmekontor\b|\bfleksibel\b|\bon.site\b|\bhjemmefra\b/i,
       en: /\bremote\b|\bhybrid\b|\bhome office\b|\bflexible work\b|\bon.site\b|\bwork from home\b/i,
     },
-    // Also check location field — if it contains remote/hybrid keywords, skip
     detectInLocation: {
       da: /\bremote\b|\bhybrid\b|\bhjemmekontor\b/i,
       en: /\bremote\b|\bhybrid\b|\bhome office\b/i,
@@ -73,36 +75,17 @@ export const COMPLETENESS_CHECKS = [
       da: 'Succeskriterier for rollen',
       en: 'Success criteria for the role',
     },
-    question: {
-      da: 'Hvad ser succes ud i denne rolle efter 6–12 måneder?',
-      en: 'What does success look like in this role after 6–12 months?',
+    why: {
+      da: 'Kandidater søger klarhed om hvad der definerer succes — det signalerer en moden organisation og øger ansøgerkvantitet.',
+      en: 'Candidates seek clarity on what defines success — it signals a mature organisation and increases application rates.',
     },
     placeholder: {
-      da: 'fx: har lanceret v2 af produktet og reduceret churn med 15%',
-      en: 'e.g. launched v2 of the product and reduced churn by 15%',
+      da: 'fx: lanceret v2 af produktet og reduceret churn med 15% efter 12 måneder',
+      en: 'e.g. launched v2 of the product and reduced churn by 15% after 12 months',
     },
     detect: {
       da: /\bsucces|\bkpi\b|\bmål\b|\bresultat|\blever(er)?\b|\bansvarlig for\b|\bopnå\b/i,
       en: /\bsuccess\b|\bkpi\b|\bgoal\b|\btarget\b|\bdeliver\b|\bachieve\b|\bresponsible for\b|\bmeasure\b/i,
-    },
-  },
-  {
-    id: 'compensation',
-    label: {
-      da: 'Løn og fordele',
-      en: 'Salary and benefits',
-    },
-    question: {
-      da: 'Hvad er lønrammen? Er der bonus, pension eller andre fordele?',
-      en: 'What is the salary range? Is there a bonus, pension, or other benefits?',
-    },
-    placeholder: {
-      da: 'fx: 55.000–65.000 kr/mdr + pension og sundhedsforsikring',
-      en: 'e.g. $80k–100k + pension and health insurance',
-    },
-    detect: {
-      da: /\bløn\b|\bkompensation\b|\bbonus\b|\bpension\b|\baktier\b|\bbenefit|\bsalary\b|\bbetaling\b/i,
-      en: /\bsalary\b|\bcompensation\b|\bbonus\b|\bpension\b|\bequity\b|\bbenefit|\bpackage\b|\bpay\b/i,
     },
   },
 ];

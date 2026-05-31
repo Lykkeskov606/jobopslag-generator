@@ -1,5 +1,37 @@
 const db = require('../db');
 
+/**
+ * Returns true if a bias match occurs in an explicitly inclusive context —
+ * e.g. "uanset baggrund", "du kan både være erfaren eller nyuddannet".
+ * These should not be flagged as violations.
+ */
+function isInInclusiveContext(text, matchIndex, matchLength, language) {
+  const WINDOW    = 55;
+  const TIGHT_WIN = 30;
+
+  const before = text.slice(Math.max(0, matchIndex - WINDOW), matchIndex).toLowerCase();
+  const after  = text.slice(matchIndex + matchLength, Math.min(text.length, matchIndex + matchLength + WINDOW)).toLowerCase();
+
+  if (language === 'en') {
+    if (/\bregardless\b/.test(before + after))  return true;
+    if (/\bboth\b/.test(before + after))        return true;
+    if (/\bwhether\b/.test(before + after))     return true;
+    const tBefore = text.slice(Math.max(0, matchIndex - TIGHT_WIN), matchIndex).toLowerCase();
+    const tAfter  = text.slice(matchIndex + matchLength, Math.min(text.length, matchIndex + matchLength + TIGHT_WIN)).toLowerCase();
+    if (/\bor\b/.test(tBefore + tAfter))        return true;
+  } else {
+    if (/\buanset\b/.test(before + after))      return true;
+    if (/\bbåde\b/.test(before + after))        return true;
+    if (/\bhvad enten\b/.test(before + after))  return true;
+    if (/\bom man er\b/.test(before + after))   return true;
+    const tBefore = text.slice(Math.max(0, matchIndex - TIGHT_WIN), matchIndex).toLowerCase();
+    const tAfter  = text.slice(matchIndex + matchLength, Math.min(text.length, matchIndex + matchLength + TIGHT_WIN)).toLowerCase();
+    if (/\beller\b/.test(tBefore + tAfter))     return true;
+  }
+
+  return false;
+}
+
 const CATEGORY_LABELS = {
   age_discrimination:           'Age discrimination (Danish law)',
   gendered_masculine:           'Masculine-coded language',
@@ -94,8 +126,14 @@ async function runBiasCheck(text, language, projectId, userId, stepNumber) {
   for (const rule of rules) {
     try {
       const regex = new RegExp(rule.pattern, 'gi');
-      const matches = [...text.matchAll(regex)];
-      for (const match of matches) {
+      const allMatches = [...text.matchAll(regex)];
+
+      // Skip matches that occur in an explicitly inclusive context
+      const realMatches = allMatches.filter(
+        (m) => !isInInclusiveContext(text, m.index, m[0].length, language)
+      );
+
+      for (const match of realMatches) {
         violations.push({
           tier: 'AB',
           category: rule.category,

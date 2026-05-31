@@ -95,12 +95,14 @@ export function InputCompletenessCheck({ jobTitle, bullets, location, language, 
           const isSkipped = skipped.has(check.id);
           const noteValue = notes[check.id] || '';
 
+          const why = check.why[lang];
+
           return (
             <div key={check.id} className={`checklist-item${isSkipped ? ' checklist-item-skipped' : ''}`}>
               <div className="checklist-item-top">
                 <div className="checklist-item-meta">
                   <span className="checklist-item-label">{label}</span>
-                  {!isSkipped && <span className="checklist-item-question">{question}</span>}
+                  {!isSkipped && <span className="checklist-item-why">{why}</span>}
                 </div>
                 <label className="checklist-skip-label">
                   <input

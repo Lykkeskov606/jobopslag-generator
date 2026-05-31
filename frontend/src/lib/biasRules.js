@@ -205,8 +205,46 @@ const EN = [
 export const BIAS_RULES = { da: DA, en: EN };
 
 /**
+ * Returns true if a bias match is used in an explicitly inclusive context,
+ * e.g. "du kan både være erfaren eller nyuddannet" or "uanset baggrund".
+ * These should not be flagged — the poster is being inclusive, not discriminatory.
+ *
+ * Uses a character window around the match to check for nearby inclusive markers.
+ */
+function isInInclusiveContext(text, matchIndex, matchLength, language) {
+  const WINDOW      = 55; // chars — ~8 words either side
+  const TIGHT_WIN   = 30; // tighter window for ambiguous words (eller/or)
+
+  const before = text.slice(Math.max(0, matchIndex - WINDOW), matchIndex).toLowerCase();
+  const after  = text.slice(matchIndex + matchLength, Math.min(text.length, matchIndex + matchLength + WINDOW)).toLowerCase();
+
+  if (language === 'en') {
+    if (/\bregardless\b/.test(before + after))  return true;
+    if (/\bboth\b/.test(before + after))        return true;
+    if (/\bwhether\b/.test(before + after))     return true;
+    // 'or' — only tight window to avoid false negatives on unrelated 'or'
+    const tBefore = text.slice(Math.max(0, matchIndex - TIGHT_WIN), matchIndex).toLowerCase();
+    const tAfter  = text.slice(matchIndex + matchLength, Math.min(text.length, matchIndex + matchLength + TIGHT_WIN)).toLowerCase();
+    if (/\bor\b/.test(tBefore + tAfter))        return true;
+  } else {
+    if (/\buanset\b/.test(before + after))      return true;
+    if (/\bbåde\b/.test(before + after))        return true;
+    if (/\bhvad enten\b/.test(before + after))  return true;
+    if (/\bom man er\b/.test(before + after))   return true;
+    // 'eller' — only tight window
+    const tBefore = text.slice(Math.max(0, matchIndex - TIGHT_WIN), matchIndex).toLowerCase();
+    const tAfter  = text.slice(matchIndex + matchLength, Math.min(text.length, matchIndex + matchLength + TIGHT_WIN)).toLowerCase();
+    if (/\beller\b/.test(tBefore + tAfter))     return true;
+  }
+
+  return false;
+}
+
+/**
  * Run client-side bias check on a single text string.
  * Returns an array of violations — empty array means no issues.
+ * Words used in explicitly inclusive context (e.g. "uanset baggrund",
+ * "både X og Y", "enten X eller Y") are not flagged.
  */
 export function checkBulletBias(text, language = 'da') {
   if (!text || !text.trim()) return [];
@@ -215,11 +253,17 @@ export function checkBulletBias(text, language = 'da') {
 
   for (const rule of rules) {
     const regex = new RegExp(rule.pattern.source, rule.pattern.flags);
-    const matches = [...text.matchAll(regex)];
-    if (matches.length > 0) {
+    const allMatches = [...text.matchAll(regex)];
+
+    // Filter out matches that occur in an inclusive context
+    const realMatches = allMatches.filter(
+      (m) => !isInInclusiveContext(text, m.index, m[0].length, language)
+    );
+
+    if (realMatches.length > 0) {
       violations.push({
         ...rule,
-        matchedTexts: [...new Set(matches.map((m) => m[0].toLowerCase()))],
+        matchedTexts: [...new Set(realMatches.map((m) => m[0].toLowerCase()))],
       });
     }
   }
