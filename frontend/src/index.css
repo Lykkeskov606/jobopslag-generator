@@ -683,6 +683,86 @@ select.form-input { cursor: pointer; }
 }
 .preview-bullet-dot { flex-shrink: 0; color: var(--primary); line-height: 1.7; }
 
+/* Input completeness checklist (micro-step between input and generation) */
+.checklist-panel { max-width: 680px; margin: 0 auto; }
+
+.checklist-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.checklist-header-icon { font-size: 1.4rem; line-height: 1; margin-top: 2px; }
+.checklist-title { font-size: 1.125rem; font-weight: 700; margin-bottom: 0.2rem; }
+.checklist-subtitle { font-size: 0.875rem; color: var(--text-muted); }
+.checklist-subtitle strong { color: var(--text); }
+
+.checklist-items { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem; }
+
+.checklist-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  background: #fafbfc;
+  transition: border-color 0.12s, background 0.12s;
+}
+.checklist-item-skipped {
+  background: #f8fafb;
+  border-color: #e2e8f0;
+  opacity: 0.65;
+}
+
+.checklist-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+}
+.checklist-item-meta { display: flex; flex-direction: column; gap: 0.15rem; }
+.checklist-item-label { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+.checklist-item-question { font-size: 0.8rem; color: var(--text-muted); }
+
+.checklist-skip-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.checklist-skip-label input[type="checkbox"] { cursor: pointer; }
+
+.checklist-note-input { margin-top: 0; }
+.checklist-note-input.note-filled {
+  border-color: var(--success);
+  background: #f0fdf4;
+}
+.checklist-note-input.note-filled:focus { border-color: var(--success); box-shadow: 0 0 0 3px rgba(22,163,74,0.1); }
+
+.checklist-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  gap: 1rem;
+}
+.checklist-addressed {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.checklist-actions { display: flex; align-items: center; gap: 0.75rem; }
+
+@media (max-width: 600px) {
+  .checklist-item-top { flex-direction: column; gap: 0.5rem; }
+  .checklist-footer { flex-direction: column; align-items: stretch; }
+  .checklist-actions { flex-direction: column; }
+}
+
 /* Mix & Match 3-panel editor */
 .finalize-mix { background: transparent; padding: 0; border: none; box-shadow: none; }
 .finalize-mix .finalize-header { margin-bottom: 0.75rem; }

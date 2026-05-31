@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { checkBulletBias } from '../lib/biasRules';
+import { runCompletenessCheck } from '../lib/completenessRules';
+import { InputCompletenessCheck } from '../components/InputCompletenessCheck';
 
 // ─── Step indicator ──────────────────────────────────────────────────────────
 
@@ -11,7 +13,7 @@ const STEPS = [
   { key: 'results',    label: 'Review'   },
   { key: 'finalize',   label: 'Download' },
 ];
-const STEP_ORDER = { input: 0, generating: 1, results: 2, finalize: 3 };
+const STEP_ORDER = { input: 0, checklist: 0, generating: 1, results: 2, finalize: 3 };
 
 function StepIndicator({ current }) {
   const idx = STEP_ORDER[current] ?? 0;
@@ -396,13 +398,26 @@ export function Tier1Page({ project }) {
       .catch(() => {}); // graceful — user can regenerate
   }, [project.id, project.completion_step]);
 
-  async function handleGenerate(e) {
+  // Step 1: validate form → run completeness check → show checklist if needed
+  function handleFormSubmit(e) {
     e.preventDefault();
     const filled = bullets.filter((b) => b.trim());
     if (!jobTitle.trim()) { setError('Job title is required.'); return; }
     if (!filled.length)   { setError('At least one bullet is required.'); return; }
     setError(null);
+
+    const missing = runCompletenessCheck({ jobTitle, bullets: filled, location, language });
+    if (missing.length > 0) {
+      setStep('checklist');
+    } else {
+      doGenerate([]);
+    }
+  }
+
+  // Step 2: called from checklist (or directly when nothing is missing)
+  async function doGenerate(extraBullets) {
     setStep('generating');
+    const filled = [...bullets.filter((b) => b.trim()), ...extraBullets];
 
     try {
       const fd = new FormData();
@@ -493,7 +508,7 @@ export function Tier1Page({ project }) {
 
         {/* ── INPUT ── */}
         {step === 'input' && (
-          <form className="input-form card" onSubmit={handleGenerate}>
+          <form className="input-form card" onSubmit={handleFormSubmit}>
             <h2 className="form-heading">Create your job posting</h2>
 
             <div className="form-section">
@@ -606,6 +621,18 @@ export function Tier1Page({ project }) {
 
             <button type="submit" className="generate-btn">Generate job posting →</button>
           </form>
+        )}
+
+        {/* ── CHECKLIST ── */}
+        {step === 'checklist' && (
+          <InputCompletenessCheck
+            jobTitle={jobTitle}
+            bullets={bullets.filter((b) => b.trim())}
+            location={location}
+            language={language}
+            onBack={() => setStep('input')}
+            onProceed={doGenerate}
+          />
         )}
 
         {/* ── GENERATING ── */}
