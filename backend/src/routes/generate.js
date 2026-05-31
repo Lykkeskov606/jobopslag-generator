@@ -69,6 +69,10 @@ router.get('/tier1/:projectId', async (req, res, next) => {
 
 // POST /api/generate/tier1 — run bias check + generate 2 variants
 router.post('/tier1', upload.single('template'), async (req, res, next) => {
+  // ── Payment gate (Fase 7 — Stripe). Superadmin always bypasses. ──────────────
+  const isSuperAdmin = req.user.role === 'superadmin';
+  // TODO Fase 7: if (!isSuperAdmin) { check subscription tier / credits here }
+  // ─────────────────────────────────────────────────────────────────────────────
   try {
     const body = { ...req.body };
     if (typeof body.bullets === 'string') {

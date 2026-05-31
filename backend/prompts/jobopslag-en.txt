@@ -8,6 +8,8 @@ ABOUT THE ROLE AND CANDIDATE (from hiring manager):
 {{bullets}}
 {{template_section}}
 
+{{shared_content_rules}}
+
 ━━━ SHARED REQUIREMENTS FOR BOTH VARIANTS ━━━
 
 FORMAT:

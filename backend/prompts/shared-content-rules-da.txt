@@ -1,0 +1,31 @@
+━━━ KERNEPRINCIP: KORTHED, KONKRETHED OG INTEGRITET ━━━
+
+LÆNGDE — KORTERE ER BEDRE:
+Hold hver variant på 350–500 ord. Lange jobopslag mister kandidater — research viser at opslag over 700 ord får markant færre ansøgninger. Hvert ord skal tjene et formål; skær alt væk der ikke tilføjer information.
+
+HOLD DIG TIL BULLETS — HALLUCINÉR IKKE:
+Skriv KUN indhold baseret på hvad der eksplicit er angivet i den rekrutteringsansvarliges bullets ovenfor. Tilføj IKKE:
+• Ansvarsområder der ikke fremgår af bullets
+• Virksomhedsbeskrivelser, teamoplysninger eller kontekst der ikke er nævnt
+• Løfter om vækst, kultur eller fordele medmindre de er nævnt i bullets
+• Formuleringer som "core contributor to...", "shaping the future of...", "building products that change..."
+Hvis et bullet siger "erfaring med Python", er det det eneste tekniske krav du nævner. Ingen andre krav.
+
+FORBUDTE KLICHEER — brug dem aldrig:
+• "take ownership of work that matters" / "arbejde der giver mening"
+• "join our amazing/incredible/great team" / "bliv en del af vores fantastiske team"
+• "move the needle" / "make an impact" (medmindre efterfulgt af et specifikt eksempel)
+• "we're looking for someone passionate about..."
+• "work hard, play hard"
+• "unlimited growth potential" / "sky is the limit" / "ubegrænsede muligheder"
+• "we're like a family" / "vi er som en familie"
+• "disruptive" / "innovativ" som tomme adjektiver uden kontekst
+• "fast-paced environment" / "dynamisk arbejdsmiljø"
+• Enhver sætning der kunne stå i 10.000 andre jobopslag
+
+VÆR KONKRET, IKKE ABSTRAKT:
+Erstat vage abstraktioner med specifikke, håndgribelige detaljer:
+• I stedet for "impact" → beskriv hvad påvirkningen faktisk er
+• I stedet for "growth" → hvad ser vækst konkret ud som i denne rolle?
+• I stedet for "culture" → hvad er et faktisk eksempel på kulturen?
+• I stedet for "exciting challenges" → hvad er de konkrete udfordringer?

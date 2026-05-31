@@ -8,6 +8,8 @@ OM ROLLEN OG KANDIDATEN (fra rekrutteringsansvarlig):
 {{bullets}}
 {{template_section}}
 
+{{shared_content_rules}}
+
 ━━━ FÆLLES KRAV TIL BEGGE VARIANTER ━━━
 
 FORM:

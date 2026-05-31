@@ -1,11 +1,17 @@
 // Client-side bias rules for inline checking as the user types.
-// Patterns mirror backend/src/db/migrations/001_initial.sql exactly.
+// Patterns mirror the DB seed in backend/src/db/migrations/*.sql.
 // Running these in the browser means instant feedback without an API round-trip.
+//
+// IMPORTANT: When adding/changing rules here, update the DB migration as well
+// so the backend bias check stays in sync.
+
+// Unicode-safe word boundary helper for Danish chars (standard \b is ASCII-only).
+// Use (?<![a-zA-ZæøåÆØÅ]) before and (?![a-zA-ZæøåÆØÅ]) after a pattern.
 
 const DA = [
   {
-    // \b doesn't catch Danish chars — use lookaround instead
-    pattern: /(?<![a-zA-ZæøåÆØÅ])(ung|yngre|frisk|moden|ældre|\+50|senior|junior|nyuddannet)(?![a-zA-ZæøåÆØÅ])/gi,
+    // "senior" and "junior" refer to seniority, NOT age — excluded from this rule.
+    pattern: /(?<![a-zA-ZæøåÆØÅ])(ung|yngre|frisk|moden|ældre|\+50|nyuddannet)(?![a-zA-ZæøåÆØÅ])/gi,
     category: 'age_discrimination',
     label: 'Aldersdiskrimination',
     severity: 'high',
@@ -51,7 +57,7 @@ const DA = [
     category: 'disability',
     label: 'Handicap-diskrimination',
     severity: 'high',
-    suggestion: 'Disse formulringer kan diskriminere mod personer med handicap (Forskelsbehandlingsloven).',
+    suggestion: 'Disse formuleringer kan diskriminere mod personer med handicap (Forskelsbehandlingsloven).',
   },
   {
     pattern: /(?<![a-zA-ZæøåÆØÅ])(kristen|muslim|jødisk)(?![a-zA-ZæøåÆØÅ])/gi,
@@ -91,8 +97,17 @@ const DA = [
 ];
 
 const EN = [
+  // Age discrimination — multi-word phrases are clear indicators; "young" alone too broad
   {
-    pattern: /(?<![a-zA-Z])(aggressive|dominant|competitive|decisive|fearless|rockstar|ninja|guru|a-player)(?![a-zA-Z])/gi,
+    pattern: /young professional|fresh graduate|recent graduate|youthful candidate|new grad(?:uate)?/gi,
+    category: 'age_discrimination_en',
+    label: 'Age discrimination',
+    severity: 'high',
+    suggestion: 'Age-related language may violate equality law. Use competency-based descriptions.',
+  },
+  // Masculine-coded language
+  {
+    pattern: /(?<![a-zA-Z])(aggressive|dominant|competitive|decisive|fearless|rockstar|ninja|guru|a-player|killer instinct|conquer|dominate)(?![a-zA-Z])/gi,
     category: 'gendered_masculine_en',
     label: 'Masculine-coded language',
     severity: 'high',
@@ -105,6 +120,7 @@ const EN = [
     severity: 'medium',
     suggestion: 'Consider more neutral alternatives.',
   },
+  // Feminine-coded language (balance check)
   {
     pattern: /(?<![a-zA-Z])(supportive|collaborative|empathetic|nurturing)(?![a-zA-Z])/gi,
     category: 'gendered_feminine_balance_en',
@@ -112,8 +128,73 @@ const EN = [
     severity: 'medium',
     suggestion: 'Balance check — many feminine-coded words can deter male candidates.',
   },
+  // Direct gender specification
   {
-    pattern: /rock star|top performer|best of the best|world-class/gi,
+    pattern: /he\/she|him\/her|male or female|male\/female/gi,
+    category: 'direct_gender_spec_en',
+    label: 'Direct gender language',
+    severity: 'high',
+    suggestion: 'Avoid specifying gender unless legally required for the role.',
+  },
+  // Ethnicity / nationality
+  {
+    pattern: /native english speaker only|must be (american|british|european|western)|european background only/gi,
+    category: 'ethnicity_en',
+    label: 'Ethnicity discrimination',
+    severity: 'high',
+    suggestion: 'Specify concrete language skills, not national or ethnic background.',
+  },
+  // Family / civil status
+  {
+    pattern: /without family (obligations|commitments)|no family (obligations|commitments)|single candidate/gi,
+    category: 'family_status_en',
+    label: 'Civil status discrimination',
+    severity: 'high',
+    suggestion: 'Family and civil status requirements may violate equality law.',
+  },
+  // Disability
+  {
+    pattern: /must be (physically )?healthy|no physical limitations|fully able-bodied|no disabilities|physically strong and healthy/gi,
+    category: 'disability_en',
+    label: 'Disability discrimination',
+    severity: 'high',
+    suggestion: 'These formulations may discriminate against persons with disabilities.',
+  },
+  // Religion
+  {
+    pattern: /(?<![a-zA-Z])(christian|muslim|jewish|hindu|buddhist)(?![a-zA-Z])/gi,
+    category: 'religion_en',
+    label: 'Religious discrimination',
+    severity: 'high',
+    suggestion: 'Religion is protected unless it is a genuine occupational requirement.',
+  },
+  // Aggressive metaphors
+  {
+    pattern: /kill it|crush (the )?competition|dominate the market|war machine|battlefield mindset|go to war/gi,
+    category: 'aggressive_metaphor_en',
+    label: 'Aggressive metaphors',
+    severity: 'medium',
+    suggestion: 'Combat metaphors can signal an unhealthy culture and exclude candidates.',
+  },
+  // Cultural exclusion
+  {
+    pattern: /fits? (our|the) (culture|dna)|one of us|part of the family|culture fit only/gi,
+    category: 'cultural_exclusion_en',
+    label: 'Cultural exclusion language',
+    severity: 'medium',
+    suggestion: 'These phrases signal in-group thinking and may discourage diverse candidates.',
+  },
+  // Education elitism
+  {
+    pattern: /ivy league|top university|elite university|from the best (schools|universities)|only (from )?(harvard|stanford|mit|oxford|cambridge)/gi,
+    category: 'education_elitism_en',
+    label: 'Education elitism',
+    severity: 'medium',
+    suggestion: 'Specify concrete competencies rather than institution names.',
+  },
+  // Elite signals
+  {
+    pattern: /rock star|top performer|best of the best|world-class|10x engineer|unicorn candidate/gi,
     category: 'elite_signal_en',
     label: 'Elite signal language',
     severity: 'low',
@@ -133,7 +214,6 @@ export function checkBulletBias(text, language = 'da') {
   const violations = [];
 
   for (const rule of rules) {
-    // Reset lastIndex for global regexes
     const regex = new RegExp(rule.pattern.source, rule.pattern.flags);
     const matches = [...text.matchAll(regex)];
     if (matches.length > 0) {

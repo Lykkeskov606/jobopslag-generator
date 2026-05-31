@@ -222,6 +222,104 @@ function VariantCard({ label, desc, content, onSelect, selected }) {
   );
 }
 
+// ─── Mix & Match 3-panel editor ──────────────────────────────────────────────
+
+function splitToSections(text) {
+  return text.split(/\n\n+/).map((s) => s.trim()).filter(Boolean);
+}
+
+function MixEditor({ variantA, variantB, value, onChange }) {
+  const [dragOver, setDragOver] = useState(false);
+  const textareaRef = useRef(null);
+  const sectionsA = splitToSections(variantA);
+  const sectionsB = splitToSections(variantB);
+  const wordCount = value.trim().split(/\s+/).filter(Boolean).length;
+
+  function appendSection(section) {
+    const sep = value && !value.endsWith('\n\n') ? '\n\n' : '';
+    onChange(value + sep + section);
+    setTimeout(() => {
+      if (textareaRef.current) textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+    }, 0);
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    const text = e.dataTransfer.getData('text/plain');
+    if (text) appendSection(text);
+  }
+
+  return (
+    <div className="mix-editor">
+      {/* Left: Variant A */}
+      <div className="mix-panel">
+        <div className="mix-panel-header">Variant A — AIDA + WIIFM</div>
+        <div className="mix-panel-sections">
+          {sectionsA.map((s, i) => (
+            <div
+              key={i}
+              className="mix-section"
+              draggable
+              onDragStart={(e) => e.dataTransfer.setData('text/plain', s)}
+            >
+              <span className="mix-section-text">{s}</span>
+              <div className="mix-section-actions">
+                <button type="button" className="mix-add-btn" onClick={() => appendSection(s)}>
+                  Add →
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Center: Workspace */}
+      <div
+        className={`mix-workspace${dragOver ? ' drag-over' : ''}`}
+        onDrop={onDrop}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+      >
+        <div className="mix-workspace-header">
+          Your posting
+          <span className="mix-workspace-meta">{wordCount} words</span>
+        </div>
+        <textarea
+          ref={textareaRef}
+          className="mix-textarea"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Click 'Add' or drag sections from the left/right panels, then edit freely…"
+        />
+        <p className="mix-workspace-hint">Drag sections here · Click Add buttons · Edit directly</p>
+      </div>
+
+      {/* Right: Variant B */}
+      <div className="mix-panel">
+        <div className="mix-panel-header">Variant B — Tactical empathy + Cialdini</div>
+        <div className="mix-panel-sections">
+          {sectionsB.map((s, i) => (
+            <div
+              key={i}
+              className="mix-section"
+              draggable
+              onDragStart={(e) => e.dataTransfer.setData('text/plain', s)}
+            >
+              <div className="mix-section-actions mix-section-actions-left">
+                <button type="button" className="mix-add-btn" onClick={() => appendSection(s)}>
+                  ← Add
+                </button>
+              </div>
+              <span className="mix-section-text">{s}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function Tier1Page({ project }) {
@@ -343,12 +441,9 @@ export function Tier1Page({ project }) {
 
   function startMix() {
     setSelectedVariant('mix');
-    const combined = `${variantA}\n\n---\n\n${variantB}`;
-    setFinalContent(combined);
+    setFinalContent(''); // User builds the mix from scratch using the 3-panel editor
     setStep('finalize');
-    api.post('/generate/tier1/save-selection', {
-      project_id: project.id, selected_variant: 'mix', final_content: combined,
-    }).catch(() => {});
+    // Save-selection is deferred to handleDownload when finalContent is ready
   }
 
   async function handleDownload() {
@@ -356,6 +451,13 @@ export function Tier1Page({ project }) {
     setDownloading(true);
     setError(null);
     try {
+      // For mix variant, content is ready now — persist the selection
+      if (selectedVariant === 'mix') {
+        await api.post('/generate/tier1/save-selection', {
+          project_id: project.id, selected_variant: 'mix', final_content: finalContent,
+        }).catch(() => {});
+      }
+
       const resp = await api.post(
         '/export/docx',
         { project_id: project.id, content: finalContent, job_title: jobTitle, language },
@@ -553,26 +655,39 @@ export function Tier1Page({ project }) {
 
         {/* ── FINALIZE ── */}
         {step === 'finalize' && (
-          <div className="finalize-step card">
+          <div className={selectedVariant === 'mix' ? 'finalize-step finalize-mix' : 'finalize-step card'}>
             <div className="finalize-header">
               <div>
                 <h2 className="form-heading">
-                  {selectedVariant === 'mix' ? 'Customize your posting' : `Variant ${selectedVariant} — edit and download`}
+                  {selectedVariant === 'mix' ? 'Mix & match your posting' : `Variant ${selectedVariant} — edit and download`}
                 </h2>
-                <p className="form-hint">Edit the text below before downloading.</p>
+                <p className="form-hint">
+                  {selectedVariant === 'mix'
+                    ? 'Drag or click sections from Variant A and B into the center, then edit freely.'
+                    : 'Edit the text below before downloading.'}
+                </p>
               </div>
               <button type="button" className="link-btn" onClick={() => setStep('results')}>← Back to variants</button>
             </div>
 
-            <div className="form-section" style={{ marginTop: '1.25rem' }}>
-              <label className="form-label">Final job posting</label>
-              <textarea
-                className="mix-textarea"
+            {selectedVariant === 'mix' ? (
+              <MixEditor
+                variantA={variantA}
+                variantB={variantB}
                 value={finalContent}
-                onChange={(e) => setFinalContent(e.target.value)}
-                rows={22}
+                onChange={setFinalContent}
               />
-            </div>
+            ) : (
+              <div className="form-section" style={{ marginTop: '1.25rem' }}>
+                <label className="form-label">Final job posting</label>
+                <textarea
+                  className="mix-textarea"
+                  value={finalContent}
+                  onChange={(e) => setFinalContent(e.target.value)}
+                  rows={22}
+                />
+              </div>
+            )}
 
             {error && <p className="error-text">{error}</p>}
 

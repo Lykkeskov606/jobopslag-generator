@@ -40,6 +40,10 @@ function buildParagraphs(content) {
 }
 
 router.post('/docx', async (req, res, next) => {
+  // ── Payment gate (Fase 7 — Stripe). Superadmin always bypasses. ──────────────
+  const isSuperAdmin = req.user.role === 'superadmin';
+  // TODO Fase 7: if (!isSuperAdmin) { check subscription tier / credits here }
+  // ─────────────────────────────────────────────────────────────────────────────
   try {
     const { project_id, content, job_title, language } = req.body;
     if (!project_id || !content) {

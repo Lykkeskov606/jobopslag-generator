@@ -13,6 +13,11 @@ function readPrompt(filename) {
   return fs.readFileSync(path.join(__dirname, '../../prompts', filename), 'utf8');
 }
 
+function readSharedRules(language) {
+  const file = `shared-content-rules-${language}.txt`;
+  return fs.readFileSync(path.join(__dirname, '../../prompts', file), 'utf8');
+}
+
 function fillTemplate(template, vars) {
   return Object.entries(vars).reduce(
     (s, [k, v]) => s.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), v ?? ''),
@@ -80,11 +85,14 @@ async function generateJobPosting({ jobTitle, bullets, language, templateContent
   ].filter(Boolean);
   const contextLines = contextParts.length ? contextParts.join('\n') : '';
 
+  const sharedRules = readSharedRules(language);
+
   const prompt = fillTemplate(template, {
     job_title: jobTitle,
     bullets: bulletsText,
     template_section: templateSection,
     context_lines: contextLines,
+    shared_content_rules: sharedRules,
   });
 
   const text = await callClaude(prompt, promptFile, projectId, userId, 2);

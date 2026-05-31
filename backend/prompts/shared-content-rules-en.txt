@@ -1,0 +1,31 @@
+━━━ CORE PRINCIPLE: BREVITY, CONCRETENESS, AND INTEGRITY ━━━
+
+LENGTH — SHORTER IS BETTER:
+Keep each variant to 350–500 words. Long job postings lose candidates — research shows postings over 700 words receive significantly fewer applications. Every word must earn its place; cut anything that does not add information.
+
+STICK TO THE BULLETS — DO NOT HALLUCINATE:
+Write ONLY content based on what is explicitly stated in the hiring manager's bullets above. Do NOT add:
+• Responsibilities not mentioned in the bullets
+• Company descriptions, team details, or context not provided
+• Promises of growth, culture, or benefits unless mentioned in the bullets
+• Phrases like "core contributor to...", "shaping the future of...", "building products that change..."
+If a bullet says "Python experience required", that is the only technical requirement you mention. No others.
+
+BANNED CLICHÉS — never use them:
+• "take ownership of work that matters"
+• "join our amazing/incredible/great team"
+• "move the needle" / "make an impact" (unless followed by a specific, concrete example)
+• "we're looking for someone passionate about..."
+• "work hard, play hard"
+• "unlimited growth potential" / "sky is the limit"
+• "we're like a family"
+• "disruptive" / "innovative" as empty adjectives without context
+• "fast-paced environment"
+• Any sentence that could appear in 10,000 other job postings
+
+BE CONCRETE, NOT ABSTRACT:
+Replace vague abstractions with specific, tangible details:
+• Instead of "impact" → describe what the actual impact is
+• Instead of "growth" → what does growth look like concretely in this role?
+• Instead of "culture" → what is an actual example of the culture?
+• Instead of "exciting challenges" → what are the specific challenges?
