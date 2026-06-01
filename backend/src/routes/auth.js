@@ -49,12 +49,38 @@ router.post('/register', authLimiter, async (req, res, next) => {
     }
 
     const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const { rows } = await db.query(
-      `INSERT INTO users (email, password_hash) VALUES ($1, $2)
-       RETURNING id, email, role, subscription_tier, preferred_output_language`,
-      [email.toLowerCase(), password_hash]
-    );
-    const user = rows[0];
+
+    // Create user + personal org atomically
+    const dbClient = await db.getClient();
+    let user;
+    try {
+      await dbClient.query('BEGIN');
+
+      const { rows } = await dbClient.query(
+        `INSERT INTO users (email, password_hash) VALUES ($1, $2)
+         RETURNING id, email, role, subscription_tier, preferred_output_language`,
+        [email.toLowerCase(), password_hash]
+      );
+      user = rows[0];
+
+      // Create personal organisation (one per user — transparent to the UI)
+      const orgName = email.split('@')[0] + "'s workspace";
+      const { rows: orgRows } = await dbClient.query(
+        `INSERT INTO organizations (name) VALUES ($1) RETURNING id`,
+        [orgName]
+      );
+      await dbClient.query(
+        `INSERT INTO organization_members (organization_id, user_id, role) VALUES ($1, $2, 'owner')`,
+        [orgRows[0].id, user.id]
+      );
+
+      await dbClient.query('COMMIT');
+    } catch (err) {
+      await dbClient.query('ROLLBACK');
+      throw err;
+    } finally {
+      dbClient.release();
+    }
 
     await trackEvent('signup', user.id, { email: user.email });
 
