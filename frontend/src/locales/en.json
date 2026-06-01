@@ -43,6 +43,12 @@
     "tier2Desc": "30–60 minutes. Full workflow → job analysis, posting, candidate profile, interview guide.",
     "noProjects": "No projects yet. Create your first job posting.",
     "lastUpdated": "Last updated",
+    "trash": "Trash",
+    "restore": "Restore",
+    "deletedAt": "Deleted",
+    "daysLeft": "days left",
+    "noTrashedProjects": "Trash is empty",
+    "trashNote": "Deleted projects are permanently removed after 7 days.",
     "status": {
       "draft": "Draft",
       "completed": "Completed",

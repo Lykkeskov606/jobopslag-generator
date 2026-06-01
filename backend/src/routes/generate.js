@@ -88,7 +88,7 @@ router.post('/tier1', upload.single('template'), async (req, res, next) => {
     const { rows: member } = await db.query(
       `SELECT 1 FROM projects p
        JOIN project_members pm ON pm.project_id = p.id
-       WHERE p.id = $1 AND pm.user_id = $2`,
+       WHERE p.id = $1 AND pm.user_id = $2 AND p.deleted_at IS NULL`,
       [project_id, req.user.id]
     );
     if (!member.length) return res.status(404).json({ error: 'Project not found' });

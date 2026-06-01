@@ -199,16 +199,40 @@ router.post('/compute-metrics', async (req, res, next) => {
 // GET /api/admin/projects — list all projects for admin management
 router.get('/projects', async (req, res, next) => {
   try {
+    const filter = req.query.filter || 'active'; // 'active' | 'deleted' | 'all'
+    const whereClause =
+      filter === 'deleted' ? 'AND p.deleted_at IS NOT NULL' :
+      filter === 'all'     ? '' :
+      'AND p.deleted_at IS NULL';
+
     const { rows } = await db.query(
       `SELECT p.id, p.name, p.tier, p.status, p.output_language,
-              p.completion_step, p.created_at, p.updated_at,
+              p.completion_step, p.created_at, p.updated_at, p.deleted_at,
               u.email AS owner_email
        FROM projects p
        JOIN users u ON u.id = p.owner_id
+       WHERE true ${whereClause}
        ORDER BY p.updated_at DESC
        LIMIT 500`
     );
     res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/admin/projects/:id/restore — admin can restore any soft-deleted project
+router.patch('/projects/:id/restore', async (req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      `UPDATE projects
+       SET deleted_at = NULL, updated_at = NOW()
+       WHERE id = $1 AND deleted_at IS NOT NULL
+       RETURNING id, name`,
+      [req.params.id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Project not found in trash' });
+    res.json(rows[0]);
   } catch (err) {
     next(err);
   }

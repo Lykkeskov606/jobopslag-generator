@@ -968,6 +968,65 @@ select.form-input { cursor: pointer; }
   .form-row { grid-template-columns: 1fr; }
 }
 
+/* Soft delete — trash view */
+.dashboard-view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1.5rem 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.view-toggle-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.view-toggle-btn.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: 600; }
+.trash-note { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+.project-item-trashed { opacity: 0.85; }
+.project-days-left { font-size: 0.8rem; color: var(--danger); font-weight: 500; }
+.restore-project-btn {
+  background: none;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.625rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.restore-project-btn:hover { background: var(--primary); color: white; }
+
+/* Admin restore */
+.admin-restore-btn {
+  background: none;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  border-radius: var(--radius);
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.admin-restore-btn:hover { background: var(--primary); color: white; }
+.admin-filter-tabs { display: flex; gap: 0.25rem; }
+.admin-filter-btn {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.admin-filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+.admin-projects-controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.row-deleted td { color: var(--text-muted); }
+
 /* Refusal panel */
 .refused-panel { text-align: center; padding: 3rem 2rem; max-width: 480px; margin: 2rem auto; }
 .refused-icon { font-size: 2.5rem; margin-bottom: 1rem; }

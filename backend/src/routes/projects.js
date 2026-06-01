@@ -11,10 +11,9 @@ const createProjectSchema = z.object({
   output_language: z.enum(['da', 'en']).default('da'),
 });
 
-// All project routes require auth
 router.use(requireAuth);
 
-// GET /api/projects — list user's projects
+// GET /api/projects — list user's active projects
 router.get('/', async (req, res, next) => {
   try {
     const { rows } = await db.query(
@@ -23,7 +22,34 @@ router.get('/', async (req, res, next) => {
        FROM projects p
        JOIN project_members pm ON pm.project_id = p.id
        WHERE pm.user_id = $1
+         AND p.deleted_at IS NULL
        ORDER BY p.updated_at DESC`,
+      [req.user.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/projects/trash — list user's soft-deleted projects (7-day window)
+router.get('/trash', async (req, res, next) => {
+  try {
+    // Permanently delete projects that have been in trash > 7 days
+    await db.query(
+      `DELETE FROM projects
+       WHERE owner_id = $1
+         AND deleted_at < NOW() - INTERVAL '7 days'`,
+      [req.user.id]
+    );
+
+    const { rows } = await db.query(
+      `SELECT p.id, p.name, p.tier, p.status, p.output_language,
+              p.completion_step, p.created_at, p.updated_at, p.deleted_at
+       FROM projects p
+       WHERE p.owner_id = $1
+         AND p.deleted_at IS NOT NULL
+       ORDER BY p.deleted_at DESC`,
       [req.user.id]
     );
     res.json(rows);
@@ -52,7 +78,6 @@ router.post('/', async (req, res, next) => {
       );
       const project = rows[0];
 
-      // Create owner membership
       await client.query(
         `INSERT INTO project_members (project_id, user_id, role, accepted_at)
          VALUES ($1, $2, 'owner', NOW())`,
@@ -74,7 +99,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-// GET /api/projects/:id — get single project (enforces membership)
+// GET /api/projects/:id — get single project (enforces membership + not deleted)
 router.get('/:id', async (req, res, next) => {
   try {
     const { rows } = await db.query(
@@ -82,7 +107,7 @@ router.get('/:id', async (req, res, next) => {
               p.jurisdiction, p.completion_step, p.created_at, p.updated_at, p.completed_at
        FROM projects p
        JOIN project_members pm ON pm.project_id = p.id
-       WHERE p.id = $1 AND pm.user_id = $2`,
+       WHERE p.id = $1 AND pm.user_id = $2 AND p.deleted_at IS NULL`,
       [req.params.id, req.user.id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Project not found' });
@@ -97,7 +122,8 @@ router.patch('/:id', async (req, res, next) => {
   try {
     const { rows: memberRows } = await db.query(
       `SELECT pm.role FROM project_members pm
-       WHERE pm.project_id = $1 AND pm.user_id = $2`,
+       JOIN projects p ON p.id = pm.project_id
+       WHERE pm.project_id = $1 AND pm.user_id = $2 AND p.deleted_at IS NULL`,
       [req.params.id, req.user.id]
     );
     if (memberRows.length === 0) return res.status(404).json({ error: 'Project not found' });
@@ -128,20 +154,41 @@ router.patch('/:id', async (req, res, next) => {
   }
 });
 
-// DELETE /api/projects/:id — owner or superadmin can delete
+// DELETE /api/projects/:id — soft delete (owner or superadmin)
 router.delete('/:id', async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role === 'superadmin';
 
     const { rows } = await db.query(
-      `DELETE FROM projects
-       WHERE id = $1 AND ($2 OR owner_id = $3)
+      `UPDATE projects
+       SET deleted_at = NOW(), updated_at = NOW()
+       WHERE id = $1 AND ($2 OR owner_id = $3) AND deleted_at IS NULL
        RETURNING id`,
       [req.params.id, isSuperAdmin, req.user.id]
     );
 
     if (rows.length === 0) return res.status(404).json({ error: 'Project not found' });
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/projects/:id/restore — restore soft-deleted project (owner or superadmin)
+router.patch('/:id/restore', async (req, res, next) => {
+  try {
+    const isSuperAdmin = req.user.role === 'superadmin';
+
+    const { rows } = await db.query(
+      `UPDATE projects
+       SET deleted_at = NULL, updated_at = NOW()
+       WHERE id = $1 AND ($2 OR owner_id = $3) AND deleted_at IS NOT NULL
+       RETURNING id, name, tier, status, output_language, completion_step, updated_at`,
+      [req.params.id, isSuperAdmin, req.user.id]
+    );
+
+    if (rows.length === 0) return res.status(404).json({ error: 'Project not found in trash' });
+    res.json(rows[0]);
   } catch (err) {
     next(err);
   }
