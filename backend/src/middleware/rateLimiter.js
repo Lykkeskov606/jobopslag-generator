@@ -17,4 +17,13 @@ const aiLimiter = rateLimit({
   message: { error: 'AI call limit reached (100/hour), please try again later' },
 });
 
-module.exports = { authLimiter, aiLimiter };
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  keyGenerator: (req) => req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many password reset requests, please try again later' },
+});
+
+module.exports = { authLimiter, aiLimiter, resetLimiter };

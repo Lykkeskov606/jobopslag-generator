@@ -967,3 +967,59 @@ select.form-input { cursor: pointer; }
   .step-label { display: none; }
   .form-row { grid-template-columns: 1fr; }
 }
+
+/* Auth extras */
+.auth-desc { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem; }
+.auth-notice { font-size: 0.9rem; padding: 0.75rem 1rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius); margin-bottom: 1rem; color: var(--text); }
+.success-notice { background: #f0fdf4; border-color: #bbf7d0; }
+
+.login-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+.login-actions button[type="submit"] { flex: 1; margin-top: 0; }
+.forgot-link { font-size: 0.875rem; white-space: nowrap; }
+
+/* Account / change-password */
+.account-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem 2rem;
+  max-width: 480px;
+}
+
+.change-password-form h2 { font-size: 1.2rem; margin-bottom: 1.25rem; }
+
+.change-password-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.change-password-form input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  outline: none;
+}
+.change-password-form input:focus { border-color: var(--primary); }
+
+.change-password-form button[type="submit"] {
+  padding: 0.625rem 1.5rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 0.25rem;
+}
+.change-password-form button[type="submit"]:hover { background: var(--primary-dark); }
+.change-password-form button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }

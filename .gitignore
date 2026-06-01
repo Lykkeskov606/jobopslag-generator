@@ -10,3 +10,4 @@ coverage/
 .nyc_output/
 .claude/
 *.docx
+scripts/reset-admin-password.js

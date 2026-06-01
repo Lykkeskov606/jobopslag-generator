@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 
-export function LoginForm({ onSuccess, onSwitchToRegister }) {
+export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }) {
   const { t } = useTranslation();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
@@ -49,9 +49,14 @@ export function LoginForm({ onSuccess, onSwitchToRegister }) {
           />
         </label>
         {error && <p className="error-text">{error}</p>}
-        <button type="submit" disabled={loading}>
-          {loading ? '...' : t('auth.login')}
-        </button>
+        <div className="login-actions">
+          <button type="submit" disabled={loading}>
+            {loading ? '...' : t('auth.login')}
+          </button>
+          <button type="button" className="link-btn forgot-link" onClick={onForgotPassword}>
+            {t('auth.forgotPassword')}
+          </button>
+        </div>
       </form>
       <p>
         {t('auth.dontHaveAccount')}{' '}

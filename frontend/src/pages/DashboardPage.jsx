@@ -50,6 +50,7 @@ export function DashboardPage() {
             </button>
           )}
           <span className="nav-user">{user?.email}</span>
+          <button className="link-btn" onClick={() => navigate('/account')}>{t('nav.account')}</button>
           <button className="link-btn" onClick={logout}>{t('auth.logout')}</button>
         </div>
       </nav>

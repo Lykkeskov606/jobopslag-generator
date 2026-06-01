@@ -5,6 +5,8 @@ import { DashboardPage } from './pages/DashboardPage';
 import { AdminPage } from './pages/AdminPage';
 import { ProjectPage } from './pages/ProjectPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { AccountPage } from './pages/AccountPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 function RequireAuth({ children }) {
@@ -18,6 +20,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<AuthPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/dashboard"
             element={
@@ -43,6 +46,14 @@ export default function App() {
               </ErrorBoundary>
             </RequireAuth>
           } />
+          <Route
+            path="/account"
+            element={
+              <RequireAuth>
+                <AccountPage />
+              </RequireAuth>
+            }
+          />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
