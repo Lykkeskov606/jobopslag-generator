@@ -21,7 +21,7 @@ const upload = multer({
 const tier1Schema = z.object({
   project_id: z.string().uuid(),
   job_title: z.string().min(1).max(200),
-  bullets: z.array(z.string().min(1).max(500)).min(1).max(10),
+  bullets: z.array(z.string().min(1).max(500)).min(1).max(20),
   language: z.enum(['da', 'en']),
   location: z.string().max(100).optional().default(''),
   start_date: z.string().max(50).optional().default(''),

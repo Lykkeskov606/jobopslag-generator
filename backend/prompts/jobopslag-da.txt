@@ -26,50 +26,9 @@ INDHOLD:
 • Ingen vage superlativer: bedste, top, elite, verdens bedste, A-spiller
 • Inkluder lokation, startdato og ansættelsestype i opslaget hvis de er angivet ovenfor
 
-━━━ VARIANT A — AIDA + WIIFM ━━━
+{{variant_a_approach}}
 
-Brug AIDA-strukturen. Hvert lag har et specifikt formål:
-
-ATTENTION (åbning, 1–2 sætninger):
-Tal DIREKTE til kandidatens indre motivation eller den kerneudfordring rollen indebærer — ikke til hvad virksomheden ønsker sig. Start ALDRIG med virksomhedsnavnet eller "Vi søger". Gode eksempler: "Vil du bygge systemer der rent faktisk holder?" / "Der er forskel på at koordinere projekter og på at eje dem." Formlen: [kandidatens rolle/identitet] møder [den reelle udfordring eller mulighed].
-
-INTEREST (rollebeskrivelse, 2–3 afsnit):
-Beskriv konkret hvad kandidaten FAKTISK laver i hverdagen — de vigtigste ansvarsområder, hvem de samarbejder med, og hvad succes ser ud i rollen. Brug aktive sætninger og specifikke eksempler fra bullets. Undgå generaliseringer og corporate-speak.
-
-DESIRE — VI TILBYDER: (dedikeret sektion):
-Her samles WIIFM. List præcist og specifikt hvad kandidaten vinder ved at takke ja:
-• Konkret kompensationsramme eller "konkurrencedygtig løn + [specifikke fordele]"
-• Vækst- og udviklingsmuligheder der er reelle, ikke generiske
-• Fleksibilitet, kultur, formål, frihed
-• Praktiske fordele der differentierer denne rolle fra andre
-
-ACTION (ansøgningsopfordring, 2–3 sætninger):
-Én klar opfordring. Fortæl hvad vi gerne vil modtage (CV, ansøgning, portfolio). Varm, direkte tone — ikke corporate boilerplate.
-
-━━━ VARIANT B — TAKTISK EMPATI + CIALDINI ━━━
-
-Brug en kombination af taktisk empati (Chris Voss, "Never Split the Difference") og Cialdinis overbevisningsprincipper. Denne variant skal FØLES anderledes end Variant A — mere menneskelig, mere nysgerrig på kandidaten.
-
-ÅBNING — Taktisk empati/labeling (1–2 sætninger):
-LABEL kandidatens sandsynlige professionelle følelse eller frustration med sin nuværende situation. Vis at vi forstår kandidatens indre verden — vi sælger IKKE en stilling, vi anerkender en oplevelse.
-Gode eksempler:
-• "Du kender sandsynligvis fornemmelsen: man har kompetencen, men ikke mandatet til at gøre en reel forskel."
-• "Det er svært at finde en rolle der matcher både den faglighed man har bygget op og det ansvar man er klar til."
-• "Mange med din profil sidder i jobs der undervurderer hvad de faktisk er i stand til."
-Brug "du"-form konsekvent. Undgå at åbne med virksomhedens navn eller "Vi er en virksomhed der...".
-
-ROLLEN — Commitment/consistency (Cialdini):
-Beskriv rollen ved at frame den om de kvaliteter KANDIDATEN sandsynligvis allerede identificerer sig med. Eksempel: "Hvis du er typen der trives med at..." / "Du arbejder bedst når...". Dette aktiverer Cialdinis consistency-princip: kandidaten bekræfter sig selv i at passe. Beskriv det konkrete ansvar og hverdagen, men altid fra kandidatens perspektiv.
-
-SOCIAL PROOF (Cialdini):
-Inkluder ét konkret, autentisk signal om kulturen set INDEFRA. Hvad siger folk der er her? Hvad er det typiske billede 6 måneder inde? Gør det specifikt og troværdigt — ikke "vi har en fantastisk kultur". Eksempel: "De fleste der starter hos os siger det samme: de vidste ikke at et job kunne være sådan her."
-
-DU FÅR: (WIIFM-sektion):
-List minimum 4 konkrete fordele, kompensation og muligheder. Brug Cialdinis liking-princip i formuleringen: vis at det er reelle mennesker der tilbyder dette, ikke en HR-afdeling.
-
-AFSLUTNING — Invitation (ikke en opfordring):
-Afslut med en VARM, PERSONLIG invitation — ikke en "ansøg nu"-knap. Aktivér Cialdinis liking yderligere ved at vise nysgerrighed på kandidaten som person, ikke kun som kompetence.
-Eksempel: "Send os en besked og fortæl lidt om dig — hvad du laver nu, og hvad du egentlig leder efter."
+{{variant_b_approach}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

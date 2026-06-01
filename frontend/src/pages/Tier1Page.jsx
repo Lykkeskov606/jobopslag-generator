@@ -13,7 +13,7 @@ const STEPS = [
   { key: 'results',    label: 'Review'   },
   { key: 'finalize',   label: 'Download' },
 ];
-const STEP_ORDER = { input: 0, checklist: 0, generating: 1, results: 2, finalize: 3 };
+const STEP_ORDER = { input: 0, checklist: 0, refused: 0, generating: 1, results: 2, finalize: 3 };
 
 function StepIndicator({ current }) {
   const idx = STEP_ORDER[current] ?? 0;
@@ -256,7 +256,7 @@ function MixEditor({ variantA, variantB, value, onChange }) {
     <div className="mix-editor">
       {/* Left: Variant A */}
       <div className="mix-panel">
-        <div className="mix-panel-header">Variant A — AIDA + WIIFM</div>
+        <div className="mix-panel-header">Variant A</div>
         <div className="mix-panel-sections">
           {sectionsA.map((s, i) => (
             <div
@@ -299,7 +299,7 @@ function MixEditor({ variantA, variantB, value, onChange }) {
 
       {/* Right: Variant B */}
       <div className="mix-panel">
-        <div className="mix-panel-header">Variant B — Tactical empathy + Cialdini</div>
+        <div className="mix-panel-header">Variant B</div>
         <div className="mix-panel-sections">
           {sectionsB.map((s, i) => (
             <div
@@ -417,9 +417,13 @@ export function Tier1Page({ project }) {
   // Step 2: called from checklist (or directly when nothing is missing)
   async function doGenerate(extraBullets) {
     setStep('generating');
-    const filled = [...bullets.filter((b) => b.trim()), ...extraBullets];
 
     try {
+      const filled = [
+        ...bullets.filter((b) => b.trim()),
+        ...(Array.isArray(extraBullets) ? extraBullets : []),
+      ];
+
       const fd = new FormData();
       fd.append('project_id', project.id);
       fd.append('job_title', jobTitle.trim());
@@ -430,17 +434,20 @@ export function Tier1Page({ project }) {
       if (employmentType) fd.append('employment_type', employmentType.trim());
       if (templateFile)   fd.append('template', templateFile);
 
-      const { data } = await api.post('/generate/tier1', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      // Let Axios/browser set Content-Type + boundary automatically for FormData
+      const { data } = await api.post('/generate/tier1', fd);
 
       setBiasWarnings(data.bias_warnings || []);
       setVariantA(data.variant_a || '');
       setVariantB(data.variant_b || '');
       setStep('results');
     } catch (err) {
-      setError(err.response?.data?.error || 'Generation failed. Please try again.');
-      setStep('input');
+      if (err.response?.status === 422) {
+        setStep('refused');
+      } else {
+        setError(err.response?.data?.error || 'Generation failed. Please try again.');
+        setStep('input');
+      }
     }
   }
 
@@ -635,6 +642,29 @@ export function Tier1Page({ project }) {
           />
         )}
 
+        {/* ── REFUSED ── */}
+        {step === 'refused' && (
+          <div className="card refused-panel">
+            <div className="refused-icon">⚠️</div>
+            <h2 className="refused-title">
+              {language === 'da' ? 'Indhold kan ikke genereres' : 'Content cannot be generated'}
+            </h2>
+            <p className="refused-body">
+              {language === 'da'
+                ? 'Dette indhold kan ikke genereres, da det strider mod vores retningslinjer.'
+                : 'This content cannot be generated as it violates our guidelines.'}
+            </p>
+            <p className="refused-hint">
+              {language === 'da'
+                ? 'Prøv at omformulere din jobtitel og bullets.'
+                : 'Try rephrasing your job title and bullets.'}
+            </p>
+            <button type="button" className="link-btn" onClick={() => setStep('input')}>
+              {language === 'da' ? '← Rediger input' : '← Edit inputs'}
+            </button>
+          </div>
+        )}
+
         {/* ── GENERATING ── */}
         {step === 'generating' && (
           <div className="generating-state card">
@@ -660,14 +690,12 @@ export function Tier1Page({ project }) {
             <div className="variants-grid">
               <VariantCard
                 label="A"
-                desc="AIDA + WIIFM"
                 content={variantA}
                 onSelect={() => selectVariant('A')}
                 selected={selectedVariant === 'A'}
               />
               <VariantCard
                 label="B"
-                desc="Tactical empathy + Cialdini"
                 content={variantB}
                 onSelect={() => selectVariant('B')}
                 selected={selectedVariant === 'B'}

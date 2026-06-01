@@ -968,6 +968,13 @@ select.form-input { cursor: pointer; }
   .form-row { grid-template-columns: 1fr; }
 }
 
+/* Refusal panel */
+.refused-panel { text-align: center; padding: 3rem 2rem; max-width: 480px; margin: 2rem auto; }
+.refused-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.refused-title { font-size: 1.25rem; margin-bottom: 0.75rem; color: var(--text); }
+.refused-body { font-size: 0.95rem; color: var(--text); margin-bottom: 0.5rem; }
+.refused-hint { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+
 /* Auth extras */
 .auth-desc { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem; }
 .auth-notice { font-size: 0.9rem; padding: 0.75rem 1rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius); margin-bottom: 1rem; color: var(--text); }

@@ -26,50 +26,9 @@ CONTENT:
 • No vague superlatives: best, top, elite, world-class, A-player, rock star, ninja
 • Include location, start date, and employment type if they are specified above
 
-━━━ VARIANT A — AIDA + WIIFM ━━━
+{{variant_a_approach}}
 
-Use the AIDA framework. Each layer has a specific purpose:
-
-ATTENTION (opening, 1–2 sentences):
-Speak DIRECTLY to the candidate's inner motivation or the core challenge this role involves — not what the company wants. NEVER start with the company name or "We are looking for". Strong examples: "There's a difference between shipping code and owning a system." / "Great HR people don't just fill roles — they change how teams are built." Formula: [candidate's role/identity] meets [the real challenge or opportunity].
-
-INTEREST (role description, 2–3 paragraphs):
-Describe what the candidate ACTUALLY does day-to-day — the most important responsibilities, who they work with, and what success looks like. Use active sentences and specific examples from the bullets. Avoid generalisations and corporate language.
-
-DESIRE — WE OFFER: (dedicated section):
-This is where WIIFM lives. List precisely and specifically what the candidate gains by saying yes:
-• Concrete compensation range or "competitive salary + [specific benefits]"
-• Real, specific growth and development opportunities — not generic ones
-• Flexibility, culture, purpose, autonomy
-• Practical benefits that differentiate this role from others
-
-ACTION (call to action, 2–3 sentences):
-One clear instruction. Tell the candidate what to send (CV, cover letter, portfolio). Warm, direct tone — not corporate boilerplate.
-
-━━━ VARIANT B — TACTICAL EMPATHY + CIALDINI ━━━
-
-Use a combination of tactical empathy (Chris Voss, "Never Split the Difference") and Cialdini's principles of persuasion. This variant must FEEL different from Variant A — more human, more curious about the candidate.
-
-OPENING — Tactical empathy / labelling (1–2 sentences):
-LABEL the candidate's likely professional feeling or frustration with their current situation. Show that you understand their inner world — you are NOT selling a job, you are acknowledging an experience.
-Strong examples:
-• "You probably know the feeling: you have the skills, but not the mandate to make a real difference."
-• "It's hard to find a role that matches both the expertise you've built and the level of ownership you're ready for."
-• "Most people with your background are sitting in roles that underestimate what they're actually capable of."
-Use "you" throughout. Never open with the company's name or "We are a company that...".
-
-THE ROLE — Commitment/consistency (Cialdini):
-Describe the role by framing it around qualities the CANDIDATE likely already identifies with. Examples: "If you're the kind of person who thrives when..." / "You do your best work when...". This activates Cialdini's consistency principle: the candidate confirms that they fit. Describe the real responsibilities and day-to-day, always from the candidate's perspective.
-
-SOCIAL PROOF (Cialdini):
-Include one concrete, authentic signal about the culture from the INSIDE. What do people who work here say? What's the typical experience at 6 months in? Make it specific and credible — not "we have a great culture". Example: "Most people who join us say the same thing: they didn't know work could feel like this."
-
-YOU'LL GET: (WIIFM section):
-List at least 4 concrete benefits, compensation details, and opportunities. Apply Cialdini's liking principle in the wording: show that real people are offering this, not an HR department.
-
-CLOSING — Invitation (not a demand):
-Close with a WARM, PERSONAL invitation — not an "apply now" button. Reinforce Cialdini's liking by showing genuine curiosity about the candidate as a person, not just a set of skills.
-Example: "Send us a message and tell us a bit about yourself — what you're doing now, and what you're really looking for."
+{{variant_b_approach}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
