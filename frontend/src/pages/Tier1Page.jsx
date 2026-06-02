@@ -400,6 +400,20 @@ export function Tier1Page({ project }) {
       .catch(() => {}); // graceful — user can regenerate
   }, [project.id, project.completion_step]);
 
+  // Re-fire evidence challenge with bullets + filled notes (called from checklist)
+  function refireEvidence(noteBullets) {
+    setEvidenceLoading(true);
+    api.post('/generate/evidence-challenge', {
+      project_id: project.id,
+      job_title: jobTitle.trim(),
+      bullets: [...bullets.filter((b) => b.trim()), ...noteBullets],
+      language,
+    })
+      .then(({ data }) => setEvidenceChallenges(data.challenges || []))
+      .catch(() => {})
+      .finally(() => setEvidenceLoading(false));
+  }
+
   // Step 1: validate form → run completeness check → show checklist + fetch evidence
   function handleFormSubmit(e) {
     e.preventDefault();
@@ -651,6 +665,7 @@ export function Tier1Page({ project }) {
             evidenceLoading={evidenceLoading}
             onBack={() => { setStep('input'); setEvidenceChallenges([]); setEvidenceLoading(false); }}
             onProceed={doGenerate}
+            onRefireEvidence={refireEvidence}
           />
         )}
 

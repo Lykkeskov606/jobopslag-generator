@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { runCompletenessCheck } from '../lib/completenessRules.js';
 
 const STRINGS = {
@@ -52,7 +52,7 @@ const STRINGS = {
 export function InputCompletenessCheck({
   jobTitle, bullets, location, language,
   evidenceChallenges = [], evidenceLoading = false,
-  onBack, onProceed,
+  onBack, onProceed, onRefireEvidence = null,
 }) {
   const lang = language === 'en' ? 'en' : 'da';
   const t = STRINGS[lang];
@@ -60,12 +60,25 @@ export function InputCompletenessCheck({
 
   const [notes, setNotes]     = useState({});
   const [skipped, setSkipped] = useState(new Set());
+  // Track dismissed by challenge text so dismissals survive evidence re-fires
   const [dismissedEvidence, setDismissedEvidence] = useState(new Set());
 
   const filledNotes = Object.entries(notes).filter(([id, v]) => v.trim() && !skipped.has(id));
   const addressedCount = filledNotes.length;
   const subtitle = missing.length === 1 ? t.subtitle_one : t.subtitle_other;
-  const visibleEvidence = evidenceChallenges.filter((_, i) => !dismissedEvidence.has(i));
+  const visibleEvidence = evidenceChallenges.filter((c) => !dismissedEvidence.has(c.text));
+
+  // Re-fire evidence challenge with bullets + filled notes (debounced 900 ms)
+  useEffect(() => {
+    if (!onRefireEvidence || !filledNotes.length) return;
+    const noteBullets = filledNotes.map(([id, text]) => {
+      const check = missing.find((c) => c.id === id);
+      const label = check?.label[lang] ?? id;
+      return `${label}: ${text.trim()}`;
+    });
+    const timer = setTimeout(() => onRefireEvidence(noteBullets), 900);
+    return () => clearTimeout(timer);
+  }, [notes, skipped]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleSkip(id) {
     setSkipped((prev) => {
@@ -80,8 +93,8 @@ export function InputCompletenessCheck({
     setNotes((prev) => ({ ...prev, [id]: value }));
   }
 
-  function dismissEvidence(idx) {
-    setDismissedEvidence((prev) => new Set([...prev, idx]));
+  function dismissEvidence(text) {
+    setDismissedEvidence((prev) => new Set([...prev, text]));
   }
 
   function proceed() {
@@ -116,7 +129,7 @@ export function InputCompletenessCheck({
               <button
                 type="button"
                 className="evidence-dismiss-btn"
-                onClick={() => dismissEvidence(evidenceChallenges.indexOf(c))}
+                onClick={() => dismissEvidence(c.text)}
                 title={t.evidence_dismiss}
               >
                 ×

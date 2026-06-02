@@ -32,7 +32,8 @@ async function searchEvidence(query, { jurisdiction = 'dk', language = 'da', lim
       [JSON.stringify(embedding), jurisdiction, language, limit]
     );
     return rows;
-  } catch {
+  } catch (err) {
+    console.error('[ragService] searchEvidence error:', err?.message || err);
     return [];
   }
 }
@@ -68,6 +69,14 @@ You MUST NEVER:
 - Invent research or cite sources not in the attached list
 - Block generation — this is advisory only
 - Produce text outside the JSON format`;
+
+// Claude sometimes wraps JSON in ```json ... ``` despite explicit instructions.
+function extractJSON(raw) {
+  const s = raw.trim();
+  const fenced = s.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+  if (fenced) return JSON.parse(fenced[1].trim());
+  return JSON.parse(s);
+}
 
 /**
  * Main Fase-3 entry point.
@@ -135,10 +144,11 @@ async function runEvidenceChallenge({ bullets, jobTitle, language, projectId, us
        inp, out, costCents, latencyMs, MODEL]
     ).catch(() => {});
 
-    const parsed = JSON.parse(resp.content[0].text);
+    const parsed = extractJSON(resp.content[0].text);
     if (!Array.isArray(parsed.challenges)) return { challenges: [] };
     return { challenges: parsed.challenges.slice(0, 3) };
-  } catch {
+  } catch (err) {
+    console.error('[ragService] runEvidenceChallenge error:', err?.message || err);
     return { challenges: [] };
   }
 }
