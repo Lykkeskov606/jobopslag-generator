@@ -49,6 +49,9 @@
     "daysLeft": "days left",
     "noTrashedProjects": "Trash is empty",
     "trashNote": "Deleted projects are permanently removed after 7 days.",
+    "evidenceTitle": "Evidence-based challenges",
+    "evidenceLoading": "Searching evidence database…",
+    "evidenceDismiss": "Dismiss",
     "status": {
       "draft": "Draft",
       "completed": "Completed",

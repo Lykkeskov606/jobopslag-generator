@@ -343,6 +343,8 @@ export function Tier1Page({ project }) {
   const [finalContent, setFinalContent] = useState('');
   const [error, setError]               = useState(null);
   const [downloading, setDownloading]   = useState(false);
+  const [evidenceChallenges, setEvidenceChallenges] = useState([]);
+  const [evidenceLoading, setEvidenceLoading]       = useState(false);
 
   // Restore localStorage draft on mount
   useEffect(() => {
@@ -398,7 +400,7 @@ export function Tier1Page({ project }) {
       .catch(() => {}); // graceful — user can regenerate
   }, [project.id, project.completion_step]);
 
-  // Step 1: validate form → run completeness check → show checklist if needed
+  // Step 1: validate form → run completeness check → show checklist + fetch evidence
   function handleFormSubmit(e) {
     e.preventDefault();
     const filled = bullets.filter((b) => b.trim());
@@ -406,12 +408,20 @@ export function Tier1Page({ project }) {
     if (!filled.length)   { setError('At least one bullet is required.'); return; }
     setError(null);
 
-    const missing = runCompletenessCheck({ jobTitle, bullets: filled, location, language });
-    if (missing.length > 0) {
-      setStep('checklist');
-    } else {
-      doGenerate([]);
-    }
+    // Always show the review panel so evidence challenges can be displayed
+    setStep('checklist');
+    setEvidenceChallenges([]);
+    setEvidenceLoading(true);
+
+    api.post('/generate/evidence-challenge', {
+      project_id: project.id,
+      job_title: jobTitle.trim(),
+      bullets: filled,
+      language,
+    })
+      .then(({ data }) => setEvidenceChallenges(data.challenges || []))
+      .catch(() => setEvidenceChallenges([]))
+      .finally(() => setEvidenceLoading(false));
   }
 
   // Step 2: called from checklist (or directly when nothing is missing)
@@ -637,7 +647,9 @@ export function Tier1Page({ project }) {
             bullets={bullets.filter((b) => b.trim())}
             location={location}
             language={language}
-            onBack={() => setStep('input')}
+            evidenceChallenges={evidenceChallenges}
+            evidenceLoading={evidenceLoading}
+            onBack={() => { setStep('input'); setEvidenceChallenges([]); setEvidenceLoading(false); }}
             onProceed={doGenerate}
           />
         )}

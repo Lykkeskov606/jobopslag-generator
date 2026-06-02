@@ -1089,3 +1089,75 @@ select.form-input { cursor: pointer; }
 }
 .change-password-form button[type="submit"]:hover { background: var(--primary-dark); }
 .change-password-form button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Evidence challenges (Fase 3 RAG) */
+.evidence-section {
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.evidence-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.evidence-icon { font-size: 1rem; }
+.evidence-section-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #1d4ed8; }
+.evidence-loading { font-size: 0.875rem; color: var(--text-muted); font-style: italic; margin: 0; }
+.evidence-challenge {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.625rem 0;
+  border-top: 1px solid #bfdbfe;
+}
+.evidence-challenge:first-of-type { border-top: none; padding-top: 0; }
+.evidence-challenge-body { flex: 1; min-width: 0; }
+.evidence-challenge-text { font-size: 0.9rem; color: var(--text); margin: 0 0 0.25rem; line-height: 1.45; }
+.evidence-challenge-citation { font-size: 0.75rem; color: var(--text-muted); margin: 0; font-style: italic; }
+.evidence-dismiss-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid #93c5fd;
+  border-radius: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+  color: #3b82f6;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 0.125rem;
+}
+.evidence-dismiss-btn:hover { background: #bfdbfe; }
+
+/* Checklist all-clear state */
+.checklist-all-clear {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 0;
+  color: var(--text);
+}
+.checklist-all-clear-icon {
+  width: 2rem;
+  height: 2rem;
+  background: #dcfce7;
+  color: #16a34a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.checklist-all-clear strong { display: block; font-size: 0.95rem; }
+.checklist-all-clear p { font-size: 0.85rem; color: var(--text-muted); margin: 0.125rem 0 0; }
+
