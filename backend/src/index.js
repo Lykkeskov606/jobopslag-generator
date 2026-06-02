@@ -39,7 +39,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/projects', require('./routes/projects'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/generate', require('./routes/generate'));
-app.use('/api/generate', require('./routes/evidence'));
+app.use('/api/generate', require('./routes/bulletChallenges'));
 app.use('/api/export', require('./routes/export'));
 
 // Sentry error handler (must come before custom errorHandler)

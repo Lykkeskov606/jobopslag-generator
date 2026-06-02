@@ -4,6 +4,8 @@ import api from '../lib/api';
 import { checkBulletBias } from '../lib/biasRules';
 import { runCompletenessCheck } from '../lib/completenessRules';
 import { InputCompletenessCheck } from '../components/InputCompletenessCheck';
+import { BulletChallengeCard } from '../components/BulletChallengeCard';
+import { useBulletChallenges } from '../hooks/useBulletChallenges';
 
 // ─── Step indicator ──────────────────────────────────────────────────────────
 
@@ -57,7 +59,7 @@ function InlineBiasWarnings({ text, language }) {
 
 // ─── Bullet inputs with inline bias ─────────────────────────────────────────
 
-function BulletInput({ bullets, onChange, language }) {
+function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIndices = new Set(), onDismissChallenge, onAcceptChallenge }) {
   const refs = useRef([]);
 
   function update(i, val) {
@@ -104,11 +106,25 @@ function BulletInput({ bullets, onChange, language }) {
               onKeyDown={(e) => handleKeyDown(e, i)}
               placeholder={i === 0 ? 'Key responsibility or requirement...' : 'Another bullet...'}
             />
+            {loadingIndices.has(i) && b.trim() && (
+              <span className="bullet-loading-dot" aria-hidden="true" />
+            )}
+            {challengeMap[i] && !loadingIndices.has(i) && (
+              <span className="bullet-challenge-icon" title="Research challenge">⚠</span>
+            )}
             {bullets.length > 1 && (
               <button type="button" className="remove-bullet" onClick={() => remove(i)} aria-label="Remove">×</button>
             )}
           </div>
           {b.trim() && <InlineBiasWarnings text={b} language={language} />}
+          {challengeMap[i] && !loadingIndices.has(i) && (
+            <BulletChallengeCard
+              challenge={challengeMap[i]}
+              language={language}
+              onAccept={(suggestion) => onAcceptChallenge(i, suggestion)}
+              onDismiss={() => onDismissChallenge(i)}
+            />
+          )}
         </div>
       ))}
       {bullets.length < 8 && (
@@ -343,8 +359,22 @@ export function Tier1Page({ project }) {
   const [finalContent, setFinalContent] = useState('');
   const [error, setError]               = useState(null);
   const [downloading, setDownloading]   = useState(false);
-  const [evidenceChallenges, setEvidenceChallenges] = useState([]);
-  const [evidenceLoading, setEvidenceLoading]       = useState(false);
+
+  // Per-bullet challenge hook — fires 1.8 s after bullets stop changing
+  const { challengeMap, loadingIndices, dismiss: dismissChallenge } = useBulletChallenges({
+    projectId: project.id,
+    jobTitle,
+    bullets,
+    language,
+  });
+
+  function handleAcceptChallenge(bulletIndex, suggestion) {
+    if (!suggestion?.trim()) return;
+    const next = [...bullets];
+    next[bulletIndex] = suggestion.trim();
+    setBullets(next);
+    dismissChallenge(bulletIndex);
+  }
 
   // Restore localStorage draft on mount
   useEffect(() => {
@@ -400,42 +430,14 @@ export function Tier1Page({ project }) {
       .catch(() => {}); // graceful — user can regenerate
   }, [project.id, project.completion_step]);
 
-  // Re-fire evidence challenge with bullets + filled notes (called from checklist)
-  function refireEvidence(noteBullets) {
-    setEvidenceLoading(true);
-    api.post('/generate/evidence-challenge', {
-      project_id: project.id,
-      job_title: jobTitle.trim(),
-      bullets: [...bullets.filter((b) => b.trim()), ...noteBullets],
-      language,
-    })
-      .then(({ data }) => setEvidenceChallenges(data.challenges || []))
-      .catch(() => {})
-      .finally(() => setEvidenceLoading(false));
-  }
-
-  // Step 1: validate form → run completeness check → show checklist + fetch evidence
+  // Step 1: validate form → show completeness checklist
   function handleFormSubmit(e) {
     e.preventDefault();
     const filled = bullets.filter((b) => b.trim());
     if (!jobTitle.trim()) { setError('Job title is required.'); return; }
     if (!filled.length)   { setError('At least one bullet is required.'); return; }
     setError(null);
-
-    // Always show the review panel so evidence challenges can be displayed
     setStep('checklist');
-    setEvidenceChallenges([]);
-    setEvidenceLoading(true);
-
-    api.post('/generate/evidence-challenge', {
-      project_id: project.id,
-      job_title: jobTitle.trim(),
-      bullets: filled,
-      language,
-    })
-      .then(({ data }) => setEvidenceChallenges(data.challenges || []))
-      .catch(() => setEvidenceChallenges([]))
-      .finally(() => setEvidenceLoading(false));
   }
 
   // Step 2: called from checklist (or directly when nothing is missing)
@@ -581,7 +583,15 @@ export function Tier1Page({ project }) {
                 About the role
                 <span className="form-hint"> — 5–6 bullets about responsibilities and what you're looking for</span>
               </label>
-              <BulletInput bullets={bullets} onChange={setBullets} language={language} />
+              <BulletInput
+                bullets={bullets}
+                onChange={setBullets}
+                language={language}
+                challengeMap={challengeMap}
+                loadingIndices={loadingIndices}
+                onDismissChallenge={dismissChallenge}
+                onAcceptChallenge={handleAcceptChallenge}
+              />
             </div>
 
             <div className="form-row">
@@ -661,11 +671,9 @@ export function Tier1Page({ project }) {
             bullets={bullets.filter((b) => b.trim())}
             location={location}
             language={language}
-            evidenceChallenges={evidenceChallenges}
-            evidenceLoading={evidenceLoading}
-            onBack={() => { setStep('input'); setEvidenceChallenges([]); setEvidenceLoading(false); }}
+            projectId={project.id}
+            onBack={() => setStep('input')}
             onProceed={doGenerate}
-            onRefireEvidence={refireEvidence}
           />
         )}
 

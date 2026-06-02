@@ -792,7 +792,7 @@ select.form-input { cursor: pointer; }
 }
 .checklist-skip-label input[type="checkbox"] { cursor: pointer; }
 
-.checklist-note-input { margin-top: 0; }
+.checklist-note-input { margin-top: 0; flex: 1; min-width: 0; }
 .checklist-note-input.note-filled {
   border-color: var(--success);
   background: #f0fdf4;
@@ -1090,52 +1090,124 @@ select.form-input { cursor: pointer; }
 .change-password-form button[type="submit"]:hover { background: var(--primary-dark); }
 .change-password-form button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Evidence challenges (Fase 3 RAG) */
-.evidence-section {
-  border: 1px solid #dbeafe;
-  background: #eff6ff;
+/* Bullet challenge cards (Fase 3 inline RAG + qualification) */
+.bullet-challenge-card {
+  margin-top: 0.5rem;
   border-radius: var(--radius);
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  border-left: 3px solid transparent;
 }
-.evidence-section-header {
+.bullet-challenge-card.bullet-challenge-evidence {
+  background: #eff6ff;
+  border-left-color: #3b82f6;
+}
+.bullet-challenge-card.bullet-challenge-qualification {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+}
+.bullet-challenge-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.375rem;
+}
+.bullet-challenge-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  padding-top: 0.1rem;
+}
+.badge-type-evidence    { color: #1d4ed8; }
+.badge-type-qualification { color: #b45309; }
+.bullet-challenge-text {
+  margin: 0;
+  line-height: 1.45;
+  color: var(--text);
+}
+.bullet-challenge-citation {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0.25rem 0 0.5rem;
+}
+.bullet-challenge-suggestion {
+  background: rgba(255,255,255,0.7);
+  border-radius: 4px;
+  padding: 0.5rem 0.625rem;
+  margin-bottom: 0.625rem;
+  line-height: 1.45;
+}
+.bullet-challenge-suggestion-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+.bullet-challenge-suggestion-text {
+  color: var(--text);
+}
+.bullet-challenge-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.btn-accept-suggestion {
+  padding: 0.3rem 0.75rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-accept-suggestion:hover { background: var(--primary-dark); }
+.btn-dismiss-challenge {
+  padding: 0.3rem 0.75rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-dismiss-challenge:hover { border-color: var(--text-muted); color: var(--text); }
+
+/* Per-bullet loading indicator and challenge icon */
+.bullet-loading-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--primary);
+  flex-shrink: 0;
+  animation: pulse-dot 1s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50%       { opacity: 1;   transform: scale(1.2); }
+}
+.bullet-challenge-icon {
+  font-size: 0.85rem;
+  color: #f59e0b;
+  flex-shrink: 0;
+  cursor: default;
+}
+
+/* Note row in checklist with loading indicator */
+.checklist-note-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
 }
-.evidence-icon { font-size: 1rem; }
-.evidence-section-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #1d4ed8; }
-.evidence-loading { font-size: 0.875rem; color: var(--text-muted); font-style: italic; margin: 0; }
-.evidence-challenge {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
-  padding: 0.625rem 0;
-  border-top: 1px solid #bfdbfe;
-}
-.evidence-challenge:first-of-type { border-top: none; padding-top: 0; }
-.evidence-challenge-body { flex: 1; min-width: 0; }
-.evidence-challenge-text { font-size: 0.9rem; color: var(--text); margin: 0 0 0.25rem; line-height: 1.45; }
-.evidence-challenge-citation { font-size: 0.75rem; color: var(--text-muted); margin: 0; font-style: italic; }
-.evidence-dismiss-btn {
-  flex-shrink: 0;
-  background: none;
-  border: 1px solid #93c5fd;
-  border-radius: 50%;
-  width: 1.5rem;
-  height: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  line-height: 1;
-  color: #3b82f6;
-  cursor: pointer;
-  padding: 0;
-  margin-top: 0.125rem;
-}
-.evidence-dismiss-btn:hover { background: #bfdbfe; }
 
 /* Checklist all-clear state */
 .checklist-all-clear {

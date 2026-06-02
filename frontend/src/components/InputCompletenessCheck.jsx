@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { runCompletenessCheck } from '../lib/completenessRules.js';
+import { useBulletChallenges } from '../hooks/useBulletChallenges.js';
+import { BulletChallengeCard } from './BulletChallengeCard.jsx';
 
 const STRINGS = {
   da: {
@@ -14,9 +16,6 @@ const STRINGS = {
     generate_anyway: 'Generer alligevel →',
     generate_ready: 'Generer jobopslag →',
     addressed: (n, total) => `${n} af ${total} udfyldt`,
-    evidence_title: 'Evidensbaserede udfordringer',
-    evidence_loading: 'Søger i forskningsdatabasen…',
-    evidence_dismiss: 'Ignorer',
   },
   en: {
     title: 'Did you remember?',
@@ -30,29 +29,24 @@ const STRINGS = {
     generate_anyway: 'Generate anyway →',
     generate_ready: 'Generate job posting →',
     addressed: (n, total) => `${n} of ${total} addressed`,
-    evidence_title: 'Evidence-based challenges',
-    evidence_loading: 'Searching evidence database…',
-    evidence_dismiss: 'Dismiss',
   },
 };
 
 /**
- * Shared input-quality micro-step shown between form input and AI generation.
- * Analyses the user's bullets for missing elements (completeness) and shows
- * any evidence-based challenges returned from the RAG service.
+ * Shared input-quality micro-step between form input and AI generation.
+ * Analyses bullets for missing elements (completeness) and shows per-note
+ * evidence/qualification challenges via the shared useBulletChallenges hook.
  *
  * Props:
  *   jobTitle, bullets, location  — current form values
  *   language                     — 'da' | 'en'
- *   evidenceChallenges           — [{text, source, citation}] (default [])
- *   evidenceLoading              — boolean (default false)
+ *   projectId                    — for the challenge API call
  *   onBack()                     — go back to edit the input form
  *   onProceed(extraBullets)      — proceed to generation with optional extra context
  */
 export function InputCompletenessCheck({
-  jobTitle, bullets, location, language,
-  evidenceChallenges = [], evidenceLoading = false,
-  onBack, onProceed, onRefireEvidence = null,
+  jobTitle, bullets, location, language, projectId,
+  onBack, onProceed,
 }) {
   const lang = language === 'en' ? 'en' : 'da';
   const t = STRINGS[lang];
@@ -60,25 +54,31 @@ export function InputCompletenessCheck({
 
   const [notes, setNotes]     = useState({});
   const [skipped, setSkipped] = useState(new Set());
-  // Track dismissed by challenge text so dismissals survive evidence re-fires
-  const [dismissedEvidence, setDismissedEvidence] = useState(new Set());
+
+  // Build note values array aligned to the missing[] array for the challenge hook
+  const noteValues = missing.map((check) => notes[check.id] || '');
+
+  const {
+    challengeMap: noteChallengeMap,
+    loadingIndices: noteLoadingIndices,
+    dismiss: dismissNoteChallenge,
+  } = useBulletChallenges({
+    projectId,
+    jobTitle,
+    bullets: noteValues,
+    language,
+    debounceMs: 1800,
+  });
+
+  function acceptNoteChallenge(noteIndex, suggestion) {
+    const check = missing[noteIndex];
+    if (check && suggestion?.trim()) setNote(check.id, suggestion.trim());
+    dismissNoteChallenge(noteIndex);
+  }
 
   const filledNotes = Object.entries(notes).filter(([id, v]) => v.trim() && !skipped.has(id));
   const addressedCount = filledNotes.length;
   const subtitle = missing.length === 1 ? t.subtitle_one : t.subtitle_other;
-  const visibleEvidence = evidenceChallenges.filter((c) => !dismissedEvidence.has(c.text));
-
-  // Re-fire evidence challenge with bullets + filled notes (debounced 900 ms)
-  useEffect(() => {
-    if (!onRefireEvidence || !filledNotes.length) return;
-    const noteBullets = filledNotes.map(([id, text]) => {
-      const check = missing.find((c) => c.id === id);
-      const label = check?.label[lang] ?? id;
-      return `${label}: ${text.trim()}`;
-    });
-    const timer = setTimeout(() => onRefireEvidence(noteBullets), 900);
-    return () => clearTimeout(timer);
-  }, [notes, skipped]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleSkip(id) {
     setSkipped((prev) => {
@@ -93,10 +93,6 @@ export function InputCompletenessCheck({
     setNotes((prev) => ({ ...prev, [id]: value }));
   }
 
-  function dismissEvidence(text) {
-    setDismissedEvidence((prev) => new Set([...prev, text]));
-  }
-
   function proceed() {
     const extraBullets = filledNotes.map(([id, text]) => {
       const check = missing.find((c) => c.id === id);
@@ -106,40 +102,8 @@ export function InputCompletenessCheck({
     onProceed(extraBullets);
   }
 
-  const hasAnything = missing.length > 0 || evidenceLoading || visibleEvidence.length > 0;
-
   return (
     <div className="checklist-panel card">
-      {/* ── Evidence challenges ── */}
-      {(evidenceLoading || visibleEvidence.length > 0) && (
-        <div className="evidence-section">
-          <div className="evidence-section-header">
-            <span className="evidence-icon">🔬</span>
-            <span className="evidence-section-title">{t.evidence_title}</span>
-          </div>
-          {evidenceLoading && (
-            <p className="evidence-loading">{t.evidence_loading}</p>
-          )}
-          {!evidenceLoading && visibleEvidence.map((c, i) => (
-            <div key={i} className="evidence-challenge">
-              <div className="evidence-challenge-body">
-                <p className="evidence-challenge-text">{c.text}</p>
-                <p className="evidence-challenge-citation">{c.citation || c.source}</p>
-              </div>
-              <button
-                type="button"
-                className="evidence-dismiss-btn"
-                onClick={() => dismissEvidence(c.text)}
-                title={t.evidence_dismiss}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Completeness check ── */}
       {missing.length > 0 && (
         <>
           <div className="checklist-header">
@@ -153,12 +117,14 @@ export function InputCompletenessCheck({
           </div>
 
           <div className="checklist-items">
-            {missing.map((check) => {
-              const label = check.label[lang];
-              const why   = check.why[lang];
+            {missing.map((check, noteIndex) => {
+              const label       = check.label[lang];
+              const why         = check.why[lang];
               const placeholder = check.placeholder[lang];
-              const isSkipped = skipped.has(check.id);
-              const noteValue = notes[check.id] || '';
+              const isSkipped   = skipped.has(check.id);
+              const noteValue   = notes[check.id] || '';
+              const challenge   = noteChallengeMap[noteIndex];
+              const isLoading   = noteLoadingIndices.has(noteIndex) && noteValue.trim();
               return (
                 <div key={check.id} className={`checklist-item${isSkipped ? ' checklist-item-skipped' : ''}`}>
                   <div className="checklist-item-top">
@@ -172,14 +138,27 @@ export function InputCompletenessCheck({
                     </label>
                   </div>
                   {!isSkipped && (
-                    <input
-                      type="text"
-                      className={`form-input checklist-note-input${noteValue.trim() ? ' note-filled' : ''}`}
-                      value={noteValue}
-                      onChange={(e) => setNote(check.id, e.target.value)}
-                      placeholder={placeholder}
-                      maxLength={200}
-                    />
+                    <>
+                      <div className="checklist-note-row">
+                        <input
+                          type="text"
+                          className={`form-input checklist-note-input${noteValue.trim() ? ' note-filled' : ''}`}
+                          value={noteValue}
+                          onChange={(e) => setNote(check.id, e.target.value)}
+                          placeholder={placeholder}
+                          maxLength={200}
+                        />
+                        {isLoading && <span className="bullet-loading-dot" aria-hidden="true" />}
+                      </div>
+                      {challenge && !isLoading && (
+                        <BulletChallengeCard
+                          challenge={challenge}
+                          language={language}
+                          onAccept={(suggestion) => acceptNoteChallenge(noteIndex, suggestion)}
+                          onDismiss={() => dismissNoteChallenge(noteIndex)}
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               );
@@ -188,8 +167,7 @@ export function InputCompletenessCheck({
         </>
       )}
 
-      {/* All-clear message when completeness passes and no evidence */}
-      {!hasAnything && (
+      {missing.length === 0 && (
         <div className="checklist-all-clear">
           <span className="checklist-all-clear-icon">✓</span>
           <div>
@@ -207,7 +185,7 @@ export function InputCompletenessCheck({
           <button type="button" className="link-btn" onClick={onBack}>
             {t.back}
           </button>
-          <button type="button" className="generate-btn" onClick={proceed} disabled={evidenceLoading && missing.length === 0}>
+          <button type="button" className="generate-btn" onClick={proceed}>
             {missing.length > 0
               ? (addressedCount > 0 ? t.generate_with(addressedCount) : t.generate_anyway)
               : t.generate_ready}
