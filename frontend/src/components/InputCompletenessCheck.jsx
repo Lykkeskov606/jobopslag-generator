@@ -55,8 +55,13 @@ export function InputCompletenessCheck({
   const [notes, setNotes]     = useState({});
   const [skipped, setSkipped] = useState(new Set());
 
-  // Build note values array aligned to the missing[] array for the challenge hook
-  const noteValues = missing.map((check) => notes[check.id] || '');
+  // Build note values with label prefix so Claude understands the context:
+  // e.g. "Teamstørrelse: 6 personer" instead of bare "6 personer"
+  const noteValues = missing.map((check) => {
+    const value = notes[check.id] || '';
+    if (!value.trim()) return '';
+    return `${check.label[lang]}: ${value}`;
+  });
 
   const {
     challengeMap: noteChallengeMap,

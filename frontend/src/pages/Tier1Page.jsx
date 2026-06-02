@@ -660,7 +660,15 @@ export function Tier1Page({ project }) {
 
             {error && <p className="error-text">{error}</p>}
 
-            <button type="submit" className="generate-btn">Generate job posting →</button>
+            <button
+              type="submit"
+              className="generate-btn"
+              disabled={loadingIndices.size > 0}
+            >
+              {loadingIndices.size > 0
+                ? (language === 'da' ? 'Tjekker input mod forskning...' : 'Checking input against research...')
+                : (language === 'da' ? 'Generer jobopslag →' : 'Generate job posting →')}
+            </button>
           </form>
         )}
 
