@@ -25,6 +25,7 @@ CONTENT:
 • Maximum 5–7 concrete requirements in the "we're looking for" section — no long "nice to have" lists
 • No vague superlatives: best, top, elite, world-class, A-player, rock star, ninja
 • Include location, start date, and employment type if they are specified above
+• NEVER use psychological terms as section titles or visible text: AIDA, WIIFM, Social proof, Tactical empathy, Cialdini, Reciprocity, Scarcity, Liking, Authority — these are internal writing principles and must never appear in the text a candidate reads
 
 {{variant_a_approach}}
 

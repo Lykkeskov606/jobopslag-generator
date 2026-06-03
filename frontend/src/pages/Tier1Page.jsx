@@ -69,7 +69,7 @@ function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIn
   }
 
   function add() {
-    if (bullets.length < 8) onChange([...bullets, '']);
+    if (bullets.length < 10) onChange([...bullets, '']);
   }
 
   function remove(i) {
@@ -80,7 +80,7 @@ function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIn
   function handleKeyDown(e, i) {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (i === bullets.length - 1 && bullets.length < 8) {
+      if (i === bullets.length - 1 && bullets.length < 10) {
         add();
         setTimeout(() => refs.current[i + 1]?.focus(), 40);
       }
@@ -127,7 +127,7 @@ function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIn
           )}
         </div>
       ))}
-      {bullets.length < 8 && (
+      {bullets.length < 10 && (
         <button type="button" className="add-bullet" onClick={add}>+ Add bullet</button>
       )}
     </div>
@@ -189,7 +189,7 @@ function BiasPanel({ warnings }) {
             style={{ background: SEV_BG[w.severity] || '#f9fafb', borderColor: SEV_BORDER[w.severity] || '#e2e8f0' }}
           >
             <div className="bias-warning-content">
-              <span className={`bias-badge badge-${w.severity}`}>{w.severity}</span>
+              <span className={`bias-badge badge-${w.severity}`} title={w.severity} />
               <span className="bias-label">{w.label || w.category}</span>
               {w.matchedText && <span className="bias-matched">"{w.matchedText}"</span>}
               {w.message    && <span className="bias-message">{w.message}</span>}
@@ -206,9 +206,9 @@ function BiasPanel({ warnings }) {
       <h3 className="bias-panel-title">
         {visible.length} potential bias {visible.length === 1 ? 'issue' : 'issues'} found
       </h3>
-      {renderGroup('In your input:', visible.filter((w) => w.source === 'input'))}
-      {renderGroup('Variant A — format:', visible.filter((w) => w.source === 'variant_a'))}
-      {renderGroup('Variant B — format:', visible.filter((w) => w.source === 'variant_b'))}
+      {renderGroup('Your input', visible.filter((w) => w.source === 'input'))}
+      {renderGroup('Variant A', visible.filter((w) => w.source === 'variant_a'))}
+      {renderGroup('Variant B', visible.filter((w) => w.source === 'variant_b'))}
     </div>
   );
 }
@@ -338,6 +338,66 @@ function MixEditor({ variantA, variantB, value, onChange }) {
   );
 }
 
+// ─── Input hash for diff-based regeneration guard ────────────────────────────
+
+function makeInputsHash(jobTitle, bullets, language, location, startDate, employmentType) {
+  return JSON.stringify({
+    jt: jobTitle.trim(),
+    bl: bullets.filter((b) => b.trim()),
+    la: language,
+    lo: location.trim(),
+    sd: startDate.trim(),
+    et: employmentType,
+  });
+}
+
+// ─── Previous generations collapsible ────────────────────────────────────────
+
+function PreviousVariants({ variants, language, onLoad }) {
+  const [open, setOpen] = useState(false);
+  if (!variants.length) return null;
+
+  function fmt(iso) {
+    try {
+      return new Date(iso).toLocaleString(language === 'en' ? 'en-GB' : 'da-DK', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    } catch { return iso; }
+  }
+
+  return (
+    <div className="previous-variants">
+      <button
+        type="button"
+        className="previous-variants-toggle"
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? '▾' : '▸'}{' '}
+        {language === 'en'
+          ? `${variants.length} earlier generation${variants.length !== 1 ? 's' : ''}`
+          : `${variants.length} tidligere generering${variants.length !== 1 ? 'er' : ''}`}
+      </button>
+      {open && (
+        <div className="previous-variants-list">
+          {variants.map((pv, i) => (
+            <div key={i} className="previous-variant-row">
+              <span className="previous-variant-date">{fmt(pv.generated_at)}</span>
+              <button
+                type="button"
+                className="previous-variant-load"
+                onClick={() => onLoad(pv)}
+              >
+                {language === 'en' ? 'Load this generation' : 'Indlæs denne'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function Tier1Page({ project }) {
@@ -359,9 +419,12 @@ export function Tier1Page({ project }) {
   const [finalContent, setFinalContent] = useState('');
   const [error, setError]               = useState(null);
   const [downloading, setDownloading]   = useState(false);
+  const [previousVariants, setPreviousVariants] = useState([]);
+  // Hash of inputs used in last generation — prevents re-gen when nothing changed
+  const lastGenHashRef = useRef(null);
 
   // Per-bullet challenge hook — fires 1.8 s after bullets stop changing
-  const { challengeMap, loadingIndices, dismiss: dismissChallenge } = useBulletChallenges({
+  const { challengeMap, loadingIndices, dismiss: dismissChallenge, markApproved } = useBulletChallenges({
     projectId: project.id,
     jobTitle,
     bullets,
@@ -370,6 +433,8 @@ export function Tier1Page({ project }) {
 
   function handleAcceptChallenge(bulletIndex, suggestion) {
     if (!suggestion?.trim()) return;
+    // Mark approved BEFORE setBullets so the hook's next fire skips this index
+    markApproved(bulletIndex, suggestion.trim());
     const next = [...bullets];
     next[bulletIndex] = suggestion.trim();
     setBullets(next);
@@ -420,7 +485,17 @@ export function Tier1Page({ project }) {
         }
         if (data.variant_a) setVariantA(data.variant_a);
         if (data.variant_b) setVariantB(data.variant_b);
-        if (data.variant_a || data.variant_b) setStep('results');
+        if (data.previous_variants) setPreviousVariants(data.previous_variants);
+        if (data.variant_a || data.variant_b) {
+          setStep('results');
+          // Seed the hash so back-navigation doesn't re-generate
+          if (inp) {
+            lastGenHashRef.current = makeInputsHash(
+              inp.job_title || '', inp.bullets || [], inp.language || 'da',
+              inp.location || '', inp.start_date || '', inp.employment_type || '',
+            );
+          }
+        }
         if (data.selection?.final_content) {
           setSelectedVariant(data.selection.selected_variant);
           setFinalContent(data.selection.final_content);
@@ -442,6 +517,13 @@ export function Tier1Page({ project }) {
 
   // Step 2: called from checklist (or directly when nothing is missing)
   async function doGenerate(extraBullets) {
+    // Skip re-generation if nothing has changed since the last run
+    const currentHash = makeInputsHash(jobTitle, bullets, language, location, startDate, employmentType);
+    if (lastGenHashRef.current === currentHash && variantA && variantB) {
+      setStep('results');
+      return;
+    }
+
     setStep('generating');
 
     try {
@@ -466,6 +548,8 @@ export function Tier1Page({ project }) {
       setBiasWarnings(data.bias_warnings || []);
       setVariantA(data.variant_a || '');
       setVariantB(data.variant_b || '');
+      if (data.previous_variants) setPreviousVariants(data.previous_variants);
+      lastGenHashRef.current = currentHash;
       setStep('results');
     } catch (err) {
       if (err.response?.status === 422) {
@@ -581,7 +665,7 @@ export function Tier1Page({ project }) {
             <div className="form-section">
               <label className="form-label">
                 About the role
-                <span className="form-hint"> — 5–6 bullets about responsibilities and what you're looking for</span>
+                <span className="form-hint"> — 5–10 bullets about responsibilities and what you're looking for</span>
               </label>
               <BulletInput
                 bullets={bullets}
@@ -748,6 +832,17 @@ export function Tier1Page({ project }) {
             <div className="mix-row">
               <button type="button" className="mix-btn" onClick={startMix}>Customize and mix →</button>
             </div>
+
+            <PreviousVariants
+              variants={previousVariants}
+              language={language}
+              onLoad={(pv) => {
+                setVariantA(pv.variant_a || '');
+                setVariantB(pv.variant_b || '');
+                setBiasWarnings([]);
+                setSelectedVariant(null);
+              }}
+            />
           </div>
         )}
 

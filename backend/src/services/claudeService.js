@@ -26,6 +26,101 @@ function fillTemplate(template, vars) {
   );
 }
 
+// ── Template structure parser ─────────────────────────────────────────────────
+// Extracts headings, company text and benefits from a raw .docx text dump
+// so we can inject structured instructions rather than a raw text blob.
+
+function parseDocxTemplate(rawText) {
+  if (!rawText?.trim()) return null;
+
+  const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);
+  const headings = [];
+  const sections = {};
+  let currentHeading = null;
+  let currentLines = [];
+
+  const isHeading = (line) => {
+    if (line.length > 70) return false;
+    if (/^[•\-\*]/.test(line)) return false;
+    if (/\d{4}/.test(line)) return false; // looks like a date/year, not a heading
+    // Starts with capital, no sentence punctuation mid-way
+    return /^[A-ZÆØÅ]/.test(line) && !/ [a-zæøå]{4,} [a-zæøå]{4,}/.test(line);
+  };
+
+  for (const line of lines) {
+    if (isHeading(line)) {
+      if (currentHeading !== null && currentLines.length) {
+        sections[currentHeading] = currentLines.join('\n');
+      }
+      currentHeading = line.replace(/:$/, '').trim();
+      headings.push(currentHeading);
+      currentLines = [];
+    } else if (currentHeading !== null) {
+      currentLines.push(line);
+    }
+  }
+  if (currentHeading !== null && currentLines.length) {
+    sections[currentHeading] = currentLines.join('\n');
+  }
+
+  // Find company description (Om os / About us / Om virksomheden / About the company)
+  const companyKey = headings.find((h) =>
+    /^(om os|about us|om virksomheden|about the company|vi er|who we are)/i.test(h)
+  );
+  const companyText = companyKey ? sections[companyKey] : (Object.values(sections)[0] || '');
+
+  // Find benefits section
+  const benefitsKey = headings.find((h) =>
+    /^(vi tilbyder|du får|we offer|you.ll get|benefits|perks|hvad tilbyder)/i.test(h)
+  );
+  const benefitsText = benefitsKey ? sections[benefitsKey] : '';
+
+  return { headings, sections, companyText, benefitsText, raw: rawText };
+}
+
+function buildTemplateSection(parsed, language) {
+  if (!parsed || !parsed.headings.length) {
+    // Fallback: include raw text if parsing found nothing structural
+    return language === 'da'
+      ? `\nVIRKSOMHEDENS SKABELON/TONE:\n${parsed?.raw || ''}`
+      : `\nCOMPANY TEMPLATE/TONE:\n${parsed?.raw || ''}`;
+  }
+
+  const headingList = parsed.headings.map((h) => `• ${h}`).join('\n');
+
+  if (language === 'da') {
+    return `
+━━━ VIRKSOMHEDENS SKABELON — FØLG PRÆCIST ━━━
+
+ANVEND DISSE SEKTIONSTITLER i denne rækkefølge (brug dem som de er, uændret):
+${headingList}
+
+${parsed.companyText ? `GENBRUG DENNE VIRKSOMHEDSTEKST ORDRET (kopier præcist — ingen parafrase, ingen tilføjelser):
+${parsed.companyText}` : ''}
+
+${parsed.benefitsText ? `GENBRUG DETTE "VI TILBYDER"-AFSNIT ORDRET:
+${parsed.benefitsText}` : ''}
+
+TONE-REFERENCE: Match tonen og sproget i denne tekst præcist:
+${parsed.raw.slice(0, 300)}`;
+  } else {
+    return `
+━━━ COMPANY TEMPLATE — FOLLOW EXACTLY ━━━
+
+USE THESE SECTION HEADINGS in this order (use as-is, unchanged):
+${headingList}
+
+${parsed.companyText ? `REUSE THIS COMPANY TEXT VERBATIM (copy exactly — no paraphrasing, no additions):
+${parsed.companyText}` : ''}
+
+${parsed.benefitsText ? `REUSE THIS "WE OFFER" SECTION VERBATIM:
+${parsed.benefitsText}` : ''}
+
+TONE REFERENCE: Match the tone and language of this text precisely:
+${parsed.raw.slice(0, 300)}`;
+  }
+}
+
 // ── Refusal detection ─────────────────────────────────────────────────────────
 
 const REFUSAL_PATTERNS = [
@@ -237,9 +332,8 @@ async function generateJobPosting({ jobTitle, bullets, language, templateContent
   const promptFile = `jobopslag-${language}.txt`;
   const template = readPrompt(promptFile);
   const bulletsText = bullets.map((b) => `• ${b}`).join('\n');
-  const templateSection = templateContent
-    ? `\n${language === 'da' ? 'VIRKSOMHEDENS SKABELON/TONE' : 'COMPANY TEMPLATE/TONE'}:\n${templateContent}`
-    : '';
+  const parsedTemplate = parseDocxTemplate(templateContent);
+  const templateSection = parsedTemplate ? buildTemplateSection(parsedTemplate, language) : '';
 
   const isDa = language === 'da';
   const contextParts = [

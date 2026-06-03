@@ -84,11 +84,13 @@ function checkTierC(text, language) {
     warnings.push({
       tier: 'C',
       category: 'wiifm_missing',
-      label: 'WIIFM missing',
+      label: language === 'da'
+        ? 'Mangler: hvad får kandidaten ud af jobbet?'
+        : 'Missing: what does the candidate get from this job?',
       severity: 'medium',
       message: language === 'da'
-        ? 'WIIFM mangler — hvad får kandidaten konkret ud af jobbet?'
-        : 'WIIFM missing — what does the candidate concretely get from this job?',
+        ? 'Tilføj et afsnit der konkret beskriver hvad kandidaten får — vækst, løn, fleksibilitet eller formål'
+        : 'Add a section describing what the candidate concretely gains — growth, salary, flexibility, or purpose',
     });
   }
 

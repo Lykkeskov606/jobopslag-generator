@@ -25,6 +25,7 @@ INDHOLD:
 • Maksimalt 5–7 konkrete krav i "vi søger"-sektionen — ingen lange "nice to have"-lister
 • Ingen vage superlativer: bedste, top, elite, verdens bedste, A-spiller
 • Inkluder lokation, startdato og ansættelsestype i opslaget hvis de er angivet ovenfor
+• ALDRIG psykologiske termer som sektionstitler eller i synlig tekst: AIDA, WIIFM, Social proof, Taktisk empati, Cialdini, Reciprocitet, Knaphed, Sympati, Autoritet — disse er interne skriveprincpper og må aldrig ses af kandidaten
 
 {{variant_a_approach}}
 

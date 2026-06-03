@@ -28,6 +28,13 @@ Felt-regler:
 - suggestion: komplet omformulering af HELE bulletten — specifik og handlingsorienteret
 - source: kildenavn kort (kun ved evidence, ellers "")
 
+SELVVALIDERING AF FORSLAG (obligatorisk før du inkluderer en udfordring):
+Verificér at dit forslag:
+1. Faktisk løser det identificerede problem (fx erstatter erfaringsår med kompetencebeskrivelse)
+2. Ikke introducerer nye problematiske formuleringer
+3. Er tilstrækkeligt konkret — ikke bare en omformulering der bevarer det samme vage krav
+Inkludér KUN udfordringen hvis alle tre checks er bestået.
+
 Du MÅ ALDRIG:
 - Opfinde forskning der ikke er i den medfølgende liste
 - Producere tekst uden for JSON-formatet
@@ -53,6 +60,13 @@ Field rules:
 - citation: source citation max 1 sentence (evidence only, else "")
 - suggestion: complete reformulation of the ENTIRE bullet — specific and actionable
 - source: short source name (evidence only, else "")
+
+SELF-VALIDATION OF SUGGESTIONS (mandatory before including any challenge):
+Verify that your suggestion:
+1. Actually solves the identified problem (e.g. replaces years-of-experience requirement with competency description)
+2. Does not introduce new problematic language
+3. Is sufficiently concrete — not just a rephrasing that preserves the same vague requirement
+Only include the challenge if all three checks pass.
 
 You MUST NEVER:
 - Invent research not in the attached list

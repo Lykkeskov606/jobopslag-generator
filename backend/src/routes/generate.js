@@ -9,6 +9,34 @@ const { generateJobPosting } = require('../services/claudeService');
 const db = require('../db');
 const { trackEvent } = require('../services/events');
 
+// Maps Zod validation issues to user-readable messages
+function zodErrorToMessage(issues, lang) {
+  for (const issue of issues) {
+    const path = issue.path[0];
+    if (path === 'bullets') {
+      if (issue.code === 'too_big') {
+        return lang === 'en'
+          ? 'Max 10 bullets — remove some to continue'
+          : 'Maks 10 bullets — fjern nogle for at fortsætte';
+      }
+      if (issue.code === 'too_small') {
+        return lang === 'en'
+          ? 'At least one bullet is required'
+          : 'Mindst én bullet er påkrævet';
+      }
+    }
+    if (path === 'job_title') {
+      return lang === 'en' ? 'Job title is required' : 'Jobtitel er påkrævet';
+    }
+    if (path === 'language') {
+      return lang === 'en' ? 'Invalid language selection' : 'Ugyldigt sprogvalg';
+    }
+  }
+  return lang === 'en'
+    ? 'Invalid form data — check all fields'
+    : 'Ugyldig formular-data — kontrollér alle felter';
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -45,7 +73,8 @@ router.get('/tier1/:projectId', async (req, res, next) => {
         [req.params.projectId]
       ),
       db.query(
-        `SELECT variant, content, language FROM project_outputs
+        `SELECT variant, content, language, generation_batch, generated_at
+         FROM project_outputs
          WHERE project_id = $1 AND output_type = 'jobopslag'
          ORDER BY generated_at DESC`,
         [req.params.projectId]
@@ -56,10 +85,28 @@ router.get('/tier1/:projectId', async (req, res, next) => {
       ),
     ]);
 
+    // Group outputs into generation batches (newest first)
+    const batchMap = new Map();
+    for (const row of outputs) {
+      // Use batch UUID if available, otherwise fall back to second-level timestamp grouping
+      const key = row.generation_batch || row.generated_at.toISOString().slice(0, 19);
+      if (!batchMap.has(key)) {
+        batchMap.set(key, { generated_at: row.generated_at, variant_a: null, variant_b: null });
+      }
+      const batch = batchMap.get(key);
+      if (row.variant === 'A') batch.variant_a = row.content;
+      if (row.variant === 'B') batch.variant_b = row.content;
+    }
+
+    const batches = [...batchMap.values()].filter((b) => b.variant_a || b.variant_b);
+    const latest = batches[0];
+    const previous = batches.slice(1);
+
     res.json({
       inputs: inputs[0]?.input_data ?? null,
-      variant_a: outputs.find((r) => r.variant === 'A')?.content ?? null,
-      variant_b: outputs.find((r) => r.variant === 'B')?.content ?? null,
+      variant_a: latest?.variant_a ?? null,
+      variant_b: latest?.variant_b ?? null,
+      previous_variants: previous,
       selection: selection[0]?.input_data ?? null,
     });
   } catch (err) {
@@ -67,8 +114,29 @@ router.get('/tier1/:projectId', async (req, res, next) => {
   }
 });
 
+// Multer error handler (file too large / wrong type)
+function multerErrorHandler(err, req, res, next) {
+  if (err?.code === 'LIMIT_FILE_SIZE') {
+    const lang = ['da', 'en'].includes(req.body?.language) ? req.body.language : 'da';
+    return res.status(400).json({
+      error: lang === 'en'
+        ? 'Template file too large — max 5 MB'
+        : 'Template-filen er for stor — maks 5 MB',
+    });
+  }
+  if (err?.message === 'Only .docx templates are accepted') {
+    const lang = ['da', 'en'].includes(req.body?.language) ? req.body.language : 'da';
+    return res.status(400).json({
+      error: lang === 'en'
+        ? 'Only .docx files are accepted as templates'
+        : 'Kun .docx-filer accepteres som skabelon',
+    });
+  }
+  next(err);
+}
+
 // POST /api/generate/tier1 — run bias check + generate 2 variants
-router.post('/tier1', upload.single('template'), async (req, res, next) => {
+router.post('/tier1', upload.single('template'), multerErrorHandler, async (req, res, next) => {
   // ── Payment gate (Fase 7 — Stripe). Superadmin always bypasses. ──────────────
   const isSuperAdmin = req.user.role === 'superadmin';
   // TODO Fase 7: if (!isSuperAdmin) { check subscription tier / credits here }
@@ -81,7 +149,10 @@ router.post('/tier1', upload.single('template'), async (req, res, next) => {
 
     const parsed = tier1Schema.safeParse(body);
     if (!parsed.success) {
-      return res.status(400).json({ error: 'Invalid input', details: parsed.error.issues });
+      const lang = ['da', 'en'].includes(body.language) ? body.language : 'da';
+      return res.status(400).json({
+        error: zodErrorToMessage(parsed.error.issues, lang),
+      });
     }
     const { project_id, job_title, bullets, language, location, start_date, employment_type } = parsed.data;
 
@@ -132,16 +203,14 @@ router.post('/tier1', upload.single('template'), async (req, res, next) => {
     const tierCWarningsA = checkTierC(variant_a, language).map((w) => ({ ...w, source: 'variant_a' }));
     const tierCWarningsB = checkTierC(variant_b, language).map((w) => ({ ...w, source: 'variant_b' }));
 
-    // Persist outputs (replace any existing for idempotency)
+    // Persist outputs — keep history, each generation gets a shared batch ID
+    const batchId = require('crypto').randomUUID();
     for (const [variant, content] of [['A', variant_a], ['B', variant_b]]) {
       await db.query(
-        `DELETE FROM project_outputs WHERE project_id = $1 AND output_type = 'jobopslag' AND variant = $2`,
-        [project_id, variant]
-      );
-      await db.query(
-        `INSERT INTO project_outputs (project_id, output_type, variant, content, language, ai_model_version)
-         VALUES ($1, 'jobopslag', $2, $3, $4, 'claude-sonnet-4-6')`,
-        [project_id, variant, content, language]
+        `INSERT INTO project_outputs
+           (project_id, output_type, variant, content, language, ai_model_version, generation_batch)
+         VALUES ($1, 'jobopslag', $2, $3, $4, 'claude-sonnet-4-6', $5)`,
+        [project_id, variant, content, language, batchId]
       );
     }
 

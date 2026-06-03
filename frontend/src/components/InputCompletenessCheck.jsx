@@ -15,6 +15,7 @@ const STRINGS = {
     generate_with: (n) => `Generer med ${n} note${n !== 1 ? 'r' : ''} →`,
     generate_anyway: 'Generer alligevel →',
     generate_ready: 'Generer jobopslag →',
+    generate_checking: 'Tjekker noter mod forskning...',
     addressed: (n, total) => `${n} af ${total} udfyldt`,
   },
   en: {
@@ -28,6 +29,7 @@ const STRINGS = {
     generate_with: (n) => `Generate with ${n} note${n !== 1 ? 's' : ''} →`,
     generate_anyway: 'Generate anyway →',
     generate_ready: 'Generate job posting →',
+    generate_checking: 'Checking notes against research...',
     addressed: (n, total) => `${n} of ${total} addressed`,
   },
 };
@@ -67,6 +69,7 @@ export function InputCompletenessCheck({
     challengeMap: noteChallengeMap,
     loadingIndices: noteLoadingIndices,
     dismiss: dismissNoteChallenge,
+    markApproved: markNoteApproved,
   } = useBulletChallenges({
     projectId,
     jobTitle,
@@ -77,7 +80,11 @@ export function InputCompletenessCheck({
 
   function acceptNoteChallenge(noteIndex, suggestion) {
     const check = missing[noteIndex];
-    if (check && suggestion?.trim()) setNote(check.id, suggestion.trim());
+    if (check && suggestion?.trim()) {
+      const labeledSuggestion = `${check.label[lang]}: ${suggestion.trim()}`;
+      markNoteApproved(noteIndex, labeledSuggestion);
+      setNote(check.id, suggestion.trim());
+    }
     dismissNoteChallenge(noteIndex);
   }
 
@@ -190,10 +197,17 @@ export function InputCompletenessCheck({
           <button type="button" className="link-btn" onClick={onBack}>
             {t.back}
           </button>
-          <button type="button" className="generate-btn" onClick={proceed}>
-            {missing.length > 0
-              ? (addressedCount > 0 ? t.generate_with(addressedCount) : t.generate_anyway)
-              : t.generate_ready}
+          <button
+            type="button"
+            className="generate-btn"
+            onClick={proceed}
+            disabled={noteLoadingIndices.size > 0}
+          >
+            {noteLoadingIndices.size > 0
+              ? t.generate_checking
+              : (missing.length > 0
+                  ? (addressedCount > 0 ? t.generate_with(addressedCount) : t.generate_anyway)
+                  : t.generate_ready)}
           </button>
         </div>
       </div>
