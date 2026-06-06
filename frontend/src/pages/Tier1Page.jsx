@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
@@ -35,17 +35,31 @@ function InlineBiasWarnings({ text, language }) {
 function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIndices = new Set(), onDismissChallenge, onAcceptChallenge }) {
   const { t, i18n } = useTranslation();
   const refs = useRef([]);
-  const prevMapRef = useRef({});
 
-  // Fix 8: scroll-anchor active element when new challenges appear
-  useEffect(() => {
-    const newKeys = Object.keys(challengeMap).filter((k) => !(k in prevMapRef.current));
-    prevMapRef.current = challengeMap;
-    if (newKeys.length > 0) {
-      requestAnimationFrame(() => {
-        document.activeElement?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-      });
+  // Fix 8: scroll-anchor — keep the focused element at its current viewport
+  // position when a challenge card is inserted above or around it.
+  //
+  // Strategy: capture getBoundingClientRect().top of activeElement during the
+  // render phase (DOM still reflects old layout), then compensate with
+  // window.scrollBy in useLayoutEffect (after React commits, before paint).
+  const prevChallengeCountRef = useRef(0);
+  const scrollAnchorRef = useRef(null);
+
+  const currentChallengeCount = Object.keys(challengeMap).length;
+  if (currentChallengeCount > prevChallengeCountRef.current) {
+    const el = document.activeElement;
+    if (el && el !== document.body) {
+      scrollAnchorRef.current = { el, top: el.getBoundingClientRect().top };
     }
+  }
+  prevChallengeCountRef.current = currentChallengeCount;
+
+  useLayoutEffect(() => {
+    if (!scrollAnchorRef.current) return;
+    const { el, top: savedTop } = scrollAnchorRef.current;
+    scrollAnchorRef.current = null;
+    const delta = el.getBoundingClientRect().top - savedTop;
+    if (Math.abs(delta) > 0) window.scrollBy(0, delta);
   }, [challengeMap]);
 
   const da = i18n.language === 'da';
