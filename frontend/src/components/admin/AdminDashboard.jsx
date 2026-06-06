@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../hooks/useAuth';
+import TopBar from '../TopBar';
 import { BusinessTab } from './tabs/BusinessTab';
 import { OperationalTab } from './tabs/OperationalTab';
 import { ProductTab } from './tabs/ProductTab';
@@ -10,12 +13,21 @@ const DAY_OPTIONS = [7, 30, 90];
 
 export function AdminDashboard() {
   const { t } = useTranslation();
+  const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState('business');
   const [days, setDays] = useState(30);
 
   return (
-    <div className="admin-dashboard">
+    <div className="app">
+      <TopBar active="admin" />
+      <div className="admin-dashboard">
       <div className="admin-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Link to="/dashboard" className="link-back" style={{ fontSize: 14 }}>
+            <span className="arrow">←</span> {t('nav.backToApp')}
+          </Link>
+          <span style={{ color: 'var(--ink-3)', fontSize: 13 }}>Admin</span>
+        </div>
         <h1>{t('admin.title')}</h1>
         <div className="date-range-selector">
           <span>{t('admin.dateRange.label')}:</span>
@@ -49,6 +61,7 @@ export function AdminDashboard() {
         {activeTab === 'product' && <ProductTab days={days} />}
         {activeTab === 'projects' && <ProjectsTab />}
       </div>
+    </div>
     </div>
   );
 }
