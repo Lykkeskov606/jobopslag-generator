@@ -2,14 +2,14 @@ const STRINGS = {
   da: {
     evidence:     'Forskning',
     qualification:'Præcisér',
-    suggestion:   'Foreslået omformulering:',
+    suggestion:   'Forslag',
     accept:       'Brug forslaget',
     dismiss:      'Behold min formulering',
   },
   en: {
     evidence:     'Research',
     qualification:'Clarify',
-    suggestion:   'Suggested reformulation:',
+    suggestion:   'Suggestion',
     accept:       'Use suggestion',
     dismiss:      'Keep mine',
   },
@@ -28,36 +28,37 @@ export function BulletChallengeCard({ challenge, onAccept, onDismiss, language }
   const isEvidence = challenge.type === 'evidence';
 
   return (
-    <div className={`bullet-challenge-card bullet-challenge-${challenge.type}`}>
-      <div className="bullet-challenge-header">
-        <span className={`bullet-challenge-badge badge-type-${challenge.type}`}>
-          {isEvidence ? '🔬' : '💭'} {isEvidence ? t.evidence : t.qualification}
+    <div className="challenge">
+      <div className="c-head">
+        <span className={`c-label${!isEvidence ? ' precise' : ''}`}>
+          {isEvidence ? t.evidence : t.qualification}
         </span>
-        <p className="bullet-challenge-text">{challenge.text}</p>
       </div>
 
+      <p className="c-problem">{challenge.text}</p>
+
       {isEvidence && challenge.citation && (
-        <p className="bullet-challenge-citation">{challenge.citation}</p>
+        <p className="c-cite">{challenge.citation}</p>
       )}
 
       {challenge.suggestion && (
-        <div className="bullet-challenge-suggestion">
-          <span className="bullet-challenge-suggestion-label">{t.suggestion}</span>
-          <span className="bullet-challenge-suggestion-text">{challenge.suggestion}</span>
+        <div className="c-suggest">
+          <span className="tag">{t.suggestion}</span>
+          <span className="text">{challenge.suggestion}</span>
         </div>
       )}
 
-      <div className="bullet-challenge-actions">
+      <div className="c-actions">
         <button
           type="button"
-          className="btn-accept-suggestion"
+          className="btn btn-primary"
           onClick={() => onAccept(challenge.suggestion)}
         >
           {t.accept}
         </button>
         <button
           type="button"
-          className="btn-dismiss-challenge"
+          className="btn btn-secondary"
           onClick={onDismiss}
         >
           {t.dismiss}
