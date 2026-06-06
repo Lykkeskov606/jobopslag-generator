@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 
 export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }) {
-  const { t } = useTranslation();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,52 +16,69 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }) {
       await login(email, password);
       onSuccess?.();
     } catch (err) {
-      setError(err.response?.data?.error || t('errors.generic'));
+      setError(err.response?.data?.error || 'Login mislykkedes. Tjek din e-mail og adgangskode.');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="auth-form">
-      <h1>{t('auth.loginTitle')}</h1>
+    <div className="auth-card">
+      <div className="head">
+        <div className="eyebrow">Log ind</div>
+        <h2>Velkommen tilbage</h2>
+        <p>
+          Ingen konto?{' '}
+          <button type="button" className="link-act" onClick={onSwitchToRegister}>
+            Opret gratis
+          </button>
+        </p>
+      </div>
+
       <form onSubmit={handleSubmit}>
-        <label>
-          {t('auth.email')}
+        {error && <p className="error-text">{error}</p>}
+
+        <div className="field">
+          <label htmlFor="lf-email">E-mail</label>
           <input
+            className="input"
+            id="lf-email"
             type="email"
+            placeholder="navn@virksomhed.dk"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            autoComplete="email"
           />
-        </label>
-        <label>
-          {t('auth.password')}
+        </div>
+
+        <div className="field">
+          <div className="field-row">
+            <label htmlFor="lf-pw">Adgangskode</label>
+            <button type="button" className="forgot" onClick={onForgotPassword}>
+              Glemt adgangskode?
+            </button>
+          </div>
           <input
+            className="input"
+            id="lf-pw"
             type="password"
+            placeholder="••••••••"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            autoComplete="current-password"
           />
-        </label>
-        {error && <p className="error-text">{error}</p>}
-        <div className="login-actions">
-          <button type="submit" disabled={loading}>
-            {loading ? '...' : t('auth.login')}
-          </button>
-          <button type="button" className="link-btn forgot-link" onClick={onForgotPassword}>
-            {t('auth.forgotPassword')}
-          </button>
         </div>
-      </form>
-      <p>
-        {t('auth.dontHaveAccount')}{' '}
-        <button type="button" className="link-btn" onClick={onSwitchToRegister}>
-          {t('auth.register')}
+
+        <button
+          className="btn btn-primary btn-lg btn-block"
+          type="submit"
+          disabled={loading}
+        >
+          {loading ? 'Logger ind…' : <>Log ind <span className="arrow">→</span></>}
         </button>
-      </p>
+      </form>
     </div>
   );
 }
