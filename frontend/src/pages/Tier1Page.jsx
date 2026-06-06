@@ -6,37 +6,10 @@ import { runCompletenessCheck } from '../lib/completenessRules';
 import { InputCompletenessCheck } from '../components/InputCompletenessCheck';
 import { BulletChallengeCard } from '../components/BulletChallengeCard';
 import { useBulletChallenges } from '../hooks/useBulletChallenges';
+import TopBar from '../components/TopBar';
+import Steps from '../components/Steps';
 
-// ─── Step indicator ──────────────────────────────────────────────────────────
-
-const STEPS = [
-  { key: 'input',      label: 'Input'    },
-  { key: 'generating', label: 'Generate' },
-  { key: 'results',    label: 'Review'   },
-  { key: 'finalize',   label: 'Download' },
-];
-const STEP_ORDER = { input: 0, checklist: 0, refused: 0, generating: 1, results: 2, finalize: 3 };
-
-function StepIndicator({ current }) {
-  const idx = STEP_ORDER[current] ?? 0;
-  return (
-    <div className="step-indicator">
-      {STEPS.map((s, i) => (
-        <div key={s.key} className="step-item-wrapper">
-          <div className={`step-item ${i <= idx ? 'step-active' : ''} ${i === idx ? 'step-current' : ''}`}>
-            <div className="step-num">{i < idx ? '✓' : i + 1}</div>
-            <span className="step-label">{s.label}</span>
-          </div>
-          {i < STEPS.length - 1 && (
-            <div className={`step-line ${i < idx ? 'step-line-done' : ''}`} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Inline bias badge ────────────────────────────────────────────────────────
+// ─── Inline bias warnings per bullet ─────────────────────────────────────────
 
 function InlineBiasWarnings({ text, language }) {
   const violations = checkBulletBias(text, language);
@@ -45,7 +18,6 @@ function InlineBiasWarnings({ text, language }) {
     <div className="inline-bias-list">
       {violations.map((v, i) => (
         <div key={i} className={`inline-bias inline-bias-${v.severity}`}>
-          <span className={`bias-badge badge-${v.severity}`}>{v.severity}</span>
           <span className="inline-bias-label">{v.label}:</span>
           <span className="inline-bias-matches">
             {v.matchedTexts.map((t) => `"${t}"`).join(', ')}
@@ -57,7 +29,7 @@ function InlineBiasWarnings({ text, language }) {
   );
 }
 
-// ─── Bullet inputs with inline bias ─────────────────────────────────────────
+// ─── Bullet inputs ────────────────────────────────────────────────────────────
 
 function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIndices = new Set(), onDismissChallenge, onAcceptChallenge }) {
   const refs = useRef([]);
@@ -92,28 +64,42 @@ function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIn
     }
   }
 
+  const da = language !== 'en';
+
   return (
-    <div className="bullet-inputs">
+    <div className="bullets">
       {bullets.map((b, i) => (
-        <div key={i} className="bullet-item">
-          <div className="bullet-row">
-            <span className="bullet-dot">•</span>
+        <div key={i} className="bullet-wrap">
+          <div className="bullet">
+            <span className="num">{i + 1}</span>
             <input
               ref={(el) => { refs.current[i] = el; }}
               type="text"
+              className="input"
               value={b}
               onChange={(e) => update(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, i)}
-              placeholder={i === 0 ? 'Key responsibility or requirement...' : 'Another bullet...'}
+              placeholder={
+                i === 0
+                  ? (da ? 'Beskriv et ansvarsområde, krav eller rammer' : 'Key responsibility or requirement')
+                  : (da ? 'Endnu et punkt…' : 'Another point…')
+              }
             />
-            {loadingIndices.has(i) && b.trim() && (
-              <span className="bullet-loading-dot" aria-hidden="true" />
-            )}
-            {challengeMap[i] && !loadingIndices.has(i) && (
-              <span className="bullet-challenge-icon" title="Research challenge">⚠</span>
-            )}
-            {bullets.length > 1 && (
-              <button type="button" className="remove-bullet" onClick={() => remove(i)} aria-label="Remove">×</button>
+            {loadingIndices.has(i) && b.trim() ? (
+              <span className="b-loading">
+                <span className="bullet-loading-dot" aria-hidden="true" />
+              </span>
+            ) : (
+              bullets.length > 1 && (
+                <button
+                  type="button"
+                  className="remove"
+                  aria-label="Fjern"
+                  onClick={() => remove(i)}
+                >
+                  ×
+                </button>
+              )
             )}
           </div>
           {b.trim() && <InlineBiasWarnings text={b} language={language} />}
@@ -128,48 +114,45 @@ function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIn
         </div>
       ))}
       {bullets.length < 10 && (
-        <button type="button" className="add-bullet" onClick={add}>+ Add bullet</button>
+        <button type="button" className="add-bullet" onClick={add}>
+          <span className="plus">+</span>
+          {da ? 'Tilføj punkt' : 'Add bullet'}
+        </button>
       )}
     </div>
   );
 }
 
-// ─── Job posting preview (plain-text to structured HTML) ─────────────────────
+// ─── Job posting preview renderer ────────────────────────────────────────────
 
 function JobPostingPreview({ content }) {
   if (!content) return null;
-  const lines = content.split('\n');
   return (
-    <div className="posting-preview">
-      {lines.map((line, i) => {
+    <>
+      {content.split('\n').map((line, i) => {
         const t = line.trim();
         if (!t) return <div key={i} className="preview-spacer" />;
-        // Section heading: ends with ':', short, no internal full-stop
-        if (t.endsWith(':') && t.length < 70 && !t.includes('. ')) {
+        if (t.endsWith(':') && t.length < 70 && !t.includes('. '))
           return <p key={i} className="preview-heading">{t}</p>;
-        }
-        // Bullet
-        if (/^[•\-\*]\s/.test(t)) {
+        if (/^[•\-\*]\s/.test(t))
           return (
             <div key={i} className="preview-bullet">
               <span className="preview-bullet-dot">•</span>
               <span>{t.replace(/^[•\-\*]\s*/, '')}</span>
             </div>
           );
-        }
         return <p key={i} className="preview-paragraph">{t}</p>;
       })}
-    </div>
+    </>
   );
 }
 
-// ─── Bias panel (post-generation warnings) ───────────────────────────────────
+// ─── Bias pill + expandable panel ────────────────────────────────────────────
 
-const SEV_BG     = { high: '#fee2e2', medium: '#fef3c7', low: '#f0fdf4' };
-const SEV_BORDER = { high: '#fca5a5', medium: '#fcd34d', low: '#86efac' };
-
-function BiasPanel({ warnings }) {
+function BiasPanel({ warnings, language }) {
   const [dismissed, setDismissed] = useState(new Set());
+  const [expanded, setExpanded] = useState(false);
+  const da = language !== 'en';
 
   function key(w) { return `${w.category}-${w.matchedText || w.message}`; }
   function dismiss(w) { setDismissed((p) => new Set([...p, key(w)])); }
@@ -181,20 +164,18 @@ function BiasPanel({ warnings }) {
     if (!items.length) return null;
     return (
       <div className="bias-group">
-        <p className="bias-section-label">{title}</p>
+        <div className="bias-group-label">{title}</div>
         {items.map((w, i) => (
-          <div
-            key={i}
-            className="bias-warning"
-            style={{ background: SEV_BG[w.severity] || '#f9fafb', borderColor: SEV_BORDER[w.severity] || '#e2e8f0' }}
-          >
-            <div className="bias-warning-content">
-              <span className={`bias-badge badge-${w.severity}`} title={w.severity} />
+          <div key={i} className="bias-warning-row">
+            <div className="bw-content">
+              <span className={`bias-dot ${w.severity}`} />
               <span className="bias-label">{w.label || w.category}</span>
               {w.matchedText && <span className="bias-matched">"{w.matchedText}"</span>}
-              {w.message    && <span className="bias-message">{w.message}</span>}
+              {w.message    && <span className="bias-msg">{w.message}</span>}
             </div>
-            <button type="button" className="dismiss-btn" onClick={() => dismiss(w)}>Dismiss</button>
+            <button type="button" className="dismiss-bw" onClick={() => dismiss(w)}>
+              {da ? 'Ignorer' : 'Dismiss'}
+            </button>
           </div>
         ))}
       </div>
@@ -202,201 +183,268 @@ function BiasPanel({ warnings }) {
   }
 
   return (
-    <div className="bias-panel">
-      <h3 className="bias-panel-title">
-        {visible.length} potential bias {visible.length === 1 ? 'issue' : 'issues'} found
-      </h3>
-      {renderGroup('Your input', visible.filter((w) => w.source === 'input'))}
-      {renderGroup('Variant A', visible.filter((w) => w.source === 'variant_a'))}
-      {renderGroup('Variant B', visible.filter((w) => w.source === 'variant_b'))}
-    </div>
-  );
-}
-
-// ─── Variant card ─────────────────────────────────────────────────────────────
-
-function VariantCard({ label, desc, content, onSelect, selected }) {
-  const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
-  return (
-    <div className={`variant-card ${selected ? 'variant-selected' : ''}`}>
-      <div className="variant-header">
-        <div>
-          <h3>Variant {label}</h3>
-          {desc && <p className="variant-desc">{desc}</p>}
+    <>
+      <div className="bias-notice">
+        <span className="ico" />
+        <span>
+          {visible.length} {da ? 'mulig' : 'potential'}{visible.length !== 1 ? (da ? 'e' : '') : ''}{' '}
+          bias{da ? '-markering' : ' issue'}{visible.length !== 1 ? (da ? 'er' : 's') : ''}
+          {da ? ' fundet' : ' found'}
+        </span>
+        <button type="button" onClick={() => setExpanded((e) => !e)}>
+          {expanded ? (da ? 'Skjul' : 'Hide') : (da ? 'Vis detaljer' : 'Show details')}
+        </button>
+      </div>
+      {expanded && (
+        <div className="bias-details">
+          {renderGroup(da ? 'Dit input' : 'Your input', visible.filter((w) => w.source === 'input'))}
+          {renderGroup('Variant A', visible.filter((w) => w.source === 'variant_a'))}
+          {renderGroup('Variant B', visible.filter((w) => w.source === 'variant_b'))}
         </div>
-        <span className="word-count">{wordCount} words</span>
-      </div>
-      <div className="variant-content">
-        <JobPostingPreview content={content} />
-      </div>
-      <button
-        type="button"
-        className={`select-variant-btn ${selected ? 'selected' : ''}`}
-        onClick={onSelect}
-      >
-        {selected ? '✓ Selected' : `Use Variant ${label}`}
-      </button>
-    </div>
+      )}
+    </>
   );
 }
 
-// ─── Mix & Match 3-panel editor ──────────────────────────────────────────────
+// ─── Mix editor ───────────────────────────────────────────────────────────────
 
 function splitToSections(text) {
   return text.split(/\n\n+/).map((s) => s.trim()).filter(Boolean);
 }
 
-function MixEditor({ variantA, variantB, value, onChange }) {
-  const [dragOver, setDragOver] = useState(false);
-  const textareaRef = useRef(null);
-  const sectionsA = splitToSections(variantA);
-  const sectionsB = splitToSections(variantB);
-  const wordCount = value.trim().split(/\s+/).filter(Boolean).length;
+function getBlockTag(text, da) {
+  const t = text.trim();
+  if (t.endsWith(':') && t.length < 60) return da ? 'OVERSKRIFT' : 'HEADING';
+  if (/^[•\-\*]/.test(t) || /\n[•\-\*]/.test(t)) return da ? 'LISTE' : 'LIST';
+  return da ? 'AFSNIT' : 'PARAGRAPH';
+}
 
-  function appendSection(section) {
-    const sep = value && !value.endsWith('\n\n') ? '\n\n' : '';
-    onChange(value + sep + section);
-    setTimeout(() => {
-      if (textareaRef.current) textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
-    }, 0);
-  }
-
-  function onDrop(e) {
-    e.preventDefault();
-    setDragOver(false);
-    const text = e.dataTransfer.getData('text/plain');
-    if (text) appendSection(text);
-  }
-
+function SourceCol({ side, label, src, usedKeys, srcPrefix, onAdd, language }) {
+  const da = language !== 'en';
   return (
-    <div className="mix-editor">
-      {/* Left: Variant A */}
-      <div className="mix-panel">
-        <div className="mix-panel-header">Variant A</div>
-        <div className="mix-panel-sections">
-          {sectionsA.map((s, i) => (
-            <div
-              key={i}
-              className="mix-section"
-              draggable
-              onDragStart={(e) => e.dataTransfer.setData('text/plain', s)}
-            >
-              <span className="mix-section-text">{s}</span>
-              <div className="mix-section-actions">
-                <button type="button" className="mix-add-btn" onClick={() => appendSection(s)}>
-                  Add →
-                </button>
-              </div>
-            </div>
-          ))}
+    <div className={`panel-col source ${side}`}>
+      <div className="col-head">
+        <div className="label">
+          <span className={`vchip ${label === 'A' ? 'a' : 'b'}`} />
+          <h2>Variant {label}</h2>
+        </div>
+        <div className="hint">
+          {side === 'left'
+            ? (da ? 'Klik for at tilføje →' : 'Click to add →')
+            : (da ? '← Klik for at tilføje' : '← Click to add')}
         </div>
       </div>
-
-      {/* Center: Workspace */}
-      <div
-        className={`mix-workspace${dragOver ? ' drag-over' : ''}`}
-        onDrop={onDrop}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-      >
-        <div className="mix-workspace-header">
-          Your posting
-          <span className="mix-workspace-meta">{wordCount} words</span>
-        </div>
-        <textarea
-          ref={textareaRef}
-          className="mix-textarea"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Click 'Add' or drag sections from the left/right panels, then edit freely…"
-        />
-        <p className="mix-workspace-hint">Drag sections here · Click Add buttons · Edit directly</p>
-      </div>
-
-      {/* Right: Variant B */}
-      <div className="mix-panel">
-        <div className="mix-panel-header">Variant B</div>
-        <div className="mix-panel-sections">
-          {sectionsB.map((s, i) => (
+      <div className="col-scroll">
+        {src.map((text, i) => {
+          const k = `${srcPrefix}|${i}`;
+          const used = usedKeys.has(k);
+          return (
             <div
               key={i}
-              className="mix-section"
-              draggable
-              onDragStart={(e) => e.dataTransfer.setData('text/plain', s)}
+              className={`src-block${used ? ' used' : ''}`}
+              onClick={() => !used && onAdd(text, label, k)}
+              draggable={!used}
+              onDragStart={(e) => { e.dataTransfer.setData('text/plain', k + '\n' + text); }}
             >
-              <div className="mix-section-actions mix-section-actions-left">
-                <button type="button" className="mix-add-btn" onClick={() => appendSection(s)}>
-                  ← Add
-                </button>
+              <div className="blk-tag">
+                <span>{getBlockTag(text, da)}</span>
+                <span className="added">{da ? 'Tilføjet ✓' : 'Added ✓'}</span>
               </div>
-              <span className="mix-section-text">{s}</span>
+              <div className="blk-text">{text}</div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// ─── Input hash for diff-based regeneration guard ────────────────────────────
+function MixEditor({ variantA, variantB, value, onChange, language }) {
+  const da = language !== 'en';
+  const sectionsA = splitToSections(variantA);
+  const sectionsB = splitToSections(variantB);
+
+  const [doc, setDoc] = useState(() => {
+    if (value?.trim()) {
+      return splitToSections(value).map((text, i) => ({
+        id: `init-${i}`, srcKey: `init-${i}`, text, src: 'A',
+      }));
+    }
+    return [];
+  });
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState('');
+
+  const usedKeys = new Set(doc.map((b) => b.srcKey));
+  const words = doc.reduce((n, b) => n + b.text.trim().split(/\s+/).filter(Boolean).length, 0);
+
+  useEffect(() => {
+    onChange(doc.map((b) => b.text).join('\n\n'));
+  }, [doc]);
+
+  function addBlock(text, src, srcKey) {
+    setDoc((d) => [...d, { id: `${Date.now()}-${Math.random()}`, srcKey, text, src }]);
+  }
+
+  function removeBlock(id) {
+    setDoc((d) => d.filter((b) => b.id !== id));
+  }
+
+  function moveBlock(id, dir) {
+    setDoc((d) => {
+      const i = d.findIndex((b) => b.id === id);
+      if (dir === 'up' && i === 0) return d;
+      if (dir === 'down' && i === d.length - 1) return d;
+      const next = [...d];
+      const swap = dir === 'up' ? i - 1 : i + 1;
+      [next[i], next[swap]] = [next[swap], next[i]];
+      return next;
+    });
+  }
+
+  function startEdit(block) {
+    setEditingId(block.id);
+    setEditText(block.text);
+  }
+
+  function saveEdit(id) {
+    if (editText.trim()) {
+      setDoc((d) => d.map((b) => (b.id === id ? { ...b, text: editText } : b)));
+    } else {
+      removeBlock(id);
+    }
+    setEditingId(null);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    const payload = e.dataTransfer.getData('text/plain');
+    if (!payload) return;
+    const [srcKey, ...lines] = payload.split('\n');
+    const text = lines.join('\n');
+    const src = srcKey.startsWith('B') ? 'B' : 'A';
+    if (!usedKeys.has(srcKey)) addBlock(text, src, srcKey);
+  }
+
+  return (
+    <div className="mixer">
+      <SourceCol
+        side="left" label="A" src={sectionsA}
+        usedKeys={usedKeys} srcPrefix="A" onAdd={addBlock} language={language}
+      />
+
+      <div
+        className="panel-col workspace"
+        onDrop={handleDrop}
+        onDragOver={(e) => e.preventDefault()}
+      >
+        <div className="ws-head">
+          <div className="ttl">
+            <h2>{da ? 'Dit opslag' : 'Your posting'}</h2>
+            <span className="meta">
+              {doc.length} {da ? 'afsnit' : 'sections'} · {da ? 'ca.' : '~'} {words} {da ? 'ord' : 'words'}
+            </span>
+          </div>
+          <button className="clear" onClick={() => setDoc([])}>
+            {da ? 'Ryd alt' : 'Clear all'}
+          </button>
+        </div>
+        <div className="ws-scroll">
+          <div className={`ws-doc${doc.length === 0 ? ' empty-state' : ''}`}>
+            {doc.length === 0 ? (
+              <div className="ws-empty">
+                <span className="serif">
+                  {da ? 'Klik på et afsnit for at tilføje det' : 'Click a section to add it'}
+                </span>
+                <span className="sm">
+                  {da ? 'Eller træk sektioner hertil' : 'Or drag sections here'}
+                </span>
+              </div>
+            ) : (
+              doc.map((block, idx) => (
+                <div
+                  key={block.id}
+                  className="ws-block"
+                  onClick={() => editingId !== block.id && startEdit(block)}
+                >
+                  <div className="wb-bar">
+                    <span className="wb-source">
+                      <span className={`vchip ${block.src === 'A' ? 'a' : 'b'}`} />
+                      Variant {block.src}
+                    </span>
+                    <div className="wb-actions">
+                      <button
+                        type="button"
+                        title={da ? 'Op' : 'Up'}
+                        disabled={idx === 0}
+                        onClick={(e) => { e.stopPropagation(); moveBlock(block.id, 'up'); }}
+                      >↑</button>
+                      <button
+                        type="button"
+                        title={da ? 'Ned' : 'Down'}
+                        disabled={idx === doc.length - 1}
+                        onClick={(e) => { e.stopPropagation(); moveBlock(block.id, 'down'); }}
+                      >↓</button>
+                      <button
+                        type="button"
+                        title={da ? 'Slet' : 'Delete'}
+                        onClick={(e) => { e.stopPropagation(); removeBlock(block.id); }}
+                      >×</button>
+                    </div>
+                  </div>
+                  {editingId === block.id ? (
+                    <textarea
+                      className="textarea"
+                      autoFocus
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onBlur={() => saveEdit(block.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        fontFamily: 'var(--serif)', fontSize: 15.5, lineHeight: 1.65,
+                        border: 'none', outline: 'none', background: 'transparent',
+                        resize: 'vertical', minHeight: 60, width: '100%',
+                      }}
+                    />
+                  ) : (
+                    <div className="wb-text">{block.text}</div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      <SourceCol
+        side="right" label="B" src={sectionsB}
+        usedKeys={usedKeys} srcPrefix="B" onAdd={addBlock} language={language}
+      />
+    </div>
+  );
+}
+
+// ─── Input hash to guard against duplicate regeneration ──────────────────────
 
 function makeInputsHash(jobTitle, bullets, language, location, startDate, employmentType) {
   return JSON.stringify({
     jt: jobTitle.trim(),
     bl: bullets.filter((b) => b.trim()),
-    la: language,
-    lo: location.trim(),
-    sd: startDate.trim(),
-    et: employmentType,
+    la: language, lo: location.trim(),
+    sd: startDate.trim(), et: employmentType,
   });
 }
 
-// ─── Previous generations collapsible ────────────────────────────────────────
+// ─── Steps config ─────────────────────────────────────────────────────────────
 
-function PreviousVariants({ variants, language, onLoad }) {
-  const [open, setOpen] = useState(false);
-  if (!variants.length) return null;
-
-  function fmt(iso) {
-    try {
-      return new Date(iso).toLocaleString(language === 'en' ? 'en-GB' : 'da-DK', {
-        day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-      });
-    } catch { return iso; }
-  }
-
-  return (
-    <div className="previous-variants">
-      <button
-        type="button"
-        className="previous-variants-toggle"
-        onClick={() => setOpen((v) => !v)}
-      >
-        {open ? '▾' : '▸'}{' '}
-        {language === 'en'
-          ? `${variants.length} earlier generation${variants.length !== 1 ? 's' : ''}`
-          : `${variants.length} tidligere generering${variants.length !== 1 ? 'er' : ''}`}
-      </button>
-      {open && (
-        <div className="previous-variants-list">
-          {variants.map((pv, i) => (
-            <div key={i} className="previous-variant-row">
-              <span className="previous-variant-date">{fmt(pv.generated_at)}</span>
-              <button
-                type="button"
-                className="previous-variant-load"
-                onClick={() => onLoad(pv)}
-              >
-                {language === 'en' ? 'Load this generation' : 'Indlæs denne'}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+const STEP_STATES = {
+  input:      [{ label: 'Input', state: 'active', n: 1 }, { label: 'Tjek', state: 'default', n: 2 }, { label: 'Generer', state: 'default', n: 3 }, { label: 'Download', state: 'default', n: 4 }],
+  checklist:  [{ label: 'Input', state: 'done' },          { label: 'Tjek', state: 'active', n: 2 }, { label: 'Generer', state: 'default', n: 3 }, { label: 'Download', state: 'default', n: 4 }],
+  generating: [{ label: 'Input', state: 'done' },          { label: 'Tjek', state: 'done' },         { label: 'Generer', state: 'active', n: 3 }, { label: 'Download', state: 'default', n: 4 }],
+  results:    [{ label: 'Input', state: 'done' },          { label: 'Tjek', state: 'done' },         { label: 'Generer', state: 'done' },         { label: 'Download', state: 'active', n: 4 }],
+  finalize:   [{ label: 'Input', state: 'done' },          { label: 'Tjek', state: 'done' },         { label: 'Generer', state: 'done' },         { label: 'Download', state: 'active', n: 4 }],
+  refused:    [{ label: 'Input', state: 'active', n: 1 }, { label: 'Tjek', state: 'default', n: 2 }, { label: 'Generer', state: 'default', n: 3 }, { label: 'Download', state: 'default', n: 4 }],
+};
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
@@ -404,26 +452,28 @@ export function Tier1Page({ project }) {
   const navigate = useNavigate();
   const storageKey = `tier1-draft-${project.id}`;
 
-  const [step, setStep] = useState('input');
-  const [language, setLanguage]         = useState(project.output_language || 'da');
-  const [jobTitle, setJobTitle]         = useState('');
-  const [bullets, setBullets]           = useState(['', '', '', '']);
-  const [location, setLocation]         = useState('');
-  const [startDate, setStartDate]       = useState('');
-  const [employmentType, setEmploymentType] = useState('');
-  const [templateFile, setTemplateFile] = useState(null);
-  const [biasWarnings, setBiasWarnings] = useState([]);
-  const [variantA, setVariantA]         = useState('');
-  const [variantB, setVariantB]         = useState('');
+  const [step, setStep]                       = useState('input');
+  const [language, setLanguage]               = useState(project.output_language || 'da');
+  const [jobTitle, setJobTitle]               = useState('');
+  const [bullets, setBullets]                 = useState(['', '', '', '']);
+  const [location, setLocation]               = useState('');
+  const [startDate, setStartDate]             = useState('');
+  const [employmentType, setEmploymentType]   = useState('');
+  const [workMode, setWorkMode]               = useState('');
+  const [templateFile, setTemplateFile]       = useState(null);
+  const [biasWarnings, setBiasWarnings]       = useState([]);
+  const [variantA, setVariantA]               = useState('');
+  const [variantB, setVariantB]               = useState('');
   const [selectedVariant, setSelectedVariant] = useState(null);
-  const [finalContent, setFinalContent] = useState('');
-  const [error, setError]               = useState(null);
-  const [downloading, setDownloading]   = useState(false);
+  const [finalContent, setFinalContent]       = useState('');
+  const [error, setError]                     = useState(null);
+  const [downloading, setDownloading]         = useState(false);
   const [previousVariants, setPreviousVariants] = useState([]);
-  // Hash of inputs used in last generation — prevents re-gen when nothing changed
+  const [historyOpen, setHistoryOpen]         = useState(false);
   const lastGenHashRef = useRef(null);
 
-  // Per-bullet challenge hook — fires 1.8 s after bullets stop changing
+  const da = language !== 'en';
+
   const { challengeMap, loadingIndices, dismiss: dismissChallenge, markApproved } = useBulletChallenges({
     projectId: project.id,
     jobTitle,
@@ -433,7 +483,6 @@ export function Tier1Page({ project }) {
 
   function handleAcceptChallenge(bulletIndex, suggestion) {
     if (!suggestion?.trim()) return;
-    // Mark approved BEFORE setBullets so the hook's next fire skips this index
     markApproved(bulletIndex, suggestion.trim());
     const next = [...bullets];
     next[bulletIndex] = suggestion.trim();
@@ -441,35 +490,36 @@ export function Tier1Page({ project }) {
     dismissChallenge(bulletIndex);
   }
 
-  // Restore localStorage draft on mount
+  // Restore localStorage draft
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const d = JSON.parse(saved);
-        if (d.jobTitle)        setJobTitle(d.jobTitle);
+        if (d.jobTitle)                          setJobTitle(d.jobTitle);
         if (Array.isArray(d.bullets) && d.bullets.length) setBullets(d.bullets);
-        if (d.language)        setLanguage(d.language);
-        if (d.location)        setLocation(d.location);
-        if (d.startDate)       setStartDate(d.startDate);
-        if (d.employmentType)  setEmploymentType(d.employmentType);
+        if (d.language)                          setLanguage(d.language);
+        if (d.location)                          setLocation(d.location);
+        if (d.startDate)                         setStartDate(d.startDate);
+        if (d.employmentType)                    setEmploymentType(d.employmentType);
+        if (d.workMode)                          setWorkMode(d.workMode);
       }
     } catch {}
   }, [storageKey]);
 
-  // Autosave every 5 seconds
+  // Autosave
   useEffect(() => {
     const id = setInterval(() => {
       try {
         localStorage.setItem(storageKey, JSON.stringify({
-          jobTitle, bullets, language, location, startDate, employmentType,
+          jobTitle, bullets, language, location, startDate, employmentType, workMode,
         }));
       } catch {}
     }, 5000);
     return () => clearInterval(id);
-  }, [storageKey, jobTitle, bullets, language, location, startDate, employmentType]);
+  }, [storageKey, jobTitle, bullets, language, location, startDate, employmentType, workMode]);
 
-  // Restore server-side outputs if project was previously generated
+  // Restore server-side outputs
   useEffect(() => {
     if (project.completion_step < 3) return;
     api.get(`/generate/tier1/${project.id}`)
@@ -488,8 +538,8 @@ export function Tier1Page({ project }) {
         if (data.previous_variants) setPreviousVariants(data.previous_variants);
         if (data.variant_a || data.variant_b) {
           setStep('results');
-          // Seed the hash so back-navigation doesn't re-generate
-          if (inp) {
+          if (data.inputs) {
+            const inp = data.inputs;
             lastGenHashRef.current = makeInputsHash(
               inp.job_title || '', inp.bullets || [], inp.language || 'da',
               inp.location || '', inp.start_date || '', inp.employment_type || '',
@@ -502,36 +552,29 @@ export function Tier1Page({ project }) {
           setStep('finalize');
         }
       })
-      .catch(() => {}); // graceful — user can regenerate
+      .catch(() => {});
   }, [project.id, project.completion_step]);
 
-  // Step 1: validate form → show completeness checklist
+  // Validate and advance to checklist
   function handleFormSubmit(e) {
     e.preventDefault();
     const filled = bullets.filter((b) => b.trim());
-    if (!jobTitle.trim()) { setError('Job title is required.'); return; }
-    if (!filled.length)   { setError('At least one bullet is required.'); return; }
+    if (!jobTitle.trim()) { setError(da ? 'Jobtitel er påkrævet.' : 'Job title is required.'); return; }
+    if (!filled.length)   { setError(da ? 'Mindst ét punkt er påkrævet.' : 'At least one bullet is required.'); return; }
     setError(null);
     setStep('checklist');
   }
 
-  // Step 2: called from checklist (or directly when nothing is missing)
+  // Generate (called from checklist)
   async function doGenerate(extraBullets) {
-    // Skip re-generation if nothing has changed since the last run
     const currentHash = makeInputsHash(jobTitle, bullets, language, location, startDate, employmentType);
     if (lastGenHashRef.current === currentHash && variantA && variantB) {
       setStep('results');
       return;
     }
-
     setStep('generating');
-
     try {
-      const filled = [
-        ...bullets.filter((b) => b.trim()),
-        ...(Array.isArray(extraBullets) ? extraBullets : []),
-      ];
-
+      const filled = [...bullets.filter((b) => b.trim()), ...(Array.isArray(extraBullets) ? extraBullets : [])];
       const fd = new FormData();
       fd.append('project_id', project.id);
       fd.append('job_title', jobTitle.trim());
@@ -540,56 +583,62 @@ export function Tier1Page({ project }) {
       if (location)       fd.append('location', location.trim());
       if (startDate)      fd.append('start_date', startDate.trim());
       if (employmentType) fd.append('employment_type', employmentType.trim());
+      if (workMode)       fd.append('work_mode', workMode.trim());
       if (templateFile)   fd.append('template', templateFile);
-
-      // Let Axios/browser set Content-Type + boundary automatically for FormData
       const { data } = await api.post('/generate/tier1', fd);
-
       setBiasWarnings(data.bias_warnings || []);
       setVariantA(data.variant_a || '');
       setVariantB(data.variant_b || '');
       if (data.previous_variants) setPreviousVariants(data.previous_variants);
       lastGenHashRef.current = currentHash;
+      setSelectedVariant(null);
       setStep('results');
     } catch (err) {
       if (err.response?.status === 422) {
         setStep('refused');
       } else {
-        setError(err.response?.data?.error || 'Generation failed. Please try again.');
+        setError(err.response?.data?.error || (da ? 'Generering fejlede. Prøv igen.' : 'Generation failed. Please try again.'));
         setStep('input');
       }
     }
   }
 
-  function selectVariant(variant) {
-    const content = variant === 'A' ? variantA : variantB;
+  // Select a variant (shows selected state + confirm bar)
+  function handleSelectVariant(variant) {
     setSelectedVariant(variant);
+    const content = variant === 'A' ? variantA : variantB;
     setFinalContent(content);
+  }
+
+  // Confirm selected variant → go to finalize/edit
+  function confirmVariant() {
+    if (!selectedVariant || selectedVariant === 'mix') return;
     setStep('finalize');
     api.post('/generate/tier1/save-selection', {
-      project_id: project.id, selected_variant: variant, final_content: content,
+      project_id: project.id,
+      selected_variant: selectedVariant,
+      final_content: finalContent,
     }).catch(() => {});
   }
 
+  // Start mix
   function startMix() {
     setSelectedVariant('mix');
-    setFinalContent(''); // User builds the mix from scratch using the 3-panel editor
+    setFinalContent('');
     setStep('finalize');
-    // Save-selection is deferred to handleDownload when finalContent is ready
   }
 
+  // Download
   async function handleDownload() {
     if (!finalContent.trim()) return;
     setDownloading(true);
     setError(null);
     try {
-      // For mix variant, content is ready now — persist the selection
       if (selectedVariant === 'mix') {
         await api.post('/generate/tier1/save-selection', {
           project_id: project.id, selected_variant: 'mix', final_content: finalContent,
         }).catch(() => {});
       }
-
       const resp = await api.post(
         '/export/docx',
         { project_id: project.id, content: finalContent, job_title: jobTitle, language },
@@ -597,167 +646,32 @@ export function Tier1Page({ project }) {
       );
       const url = URL.createObjectURL(new Blob([resp.data]));
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `${jobTitle || 'job-posting'}.docx`;
-      a.click();
+      a.href = url; a.download = `${jobTitle || 'job-posting'}.docx`; a.click();
       URL.revokeObjectURL(url);
       localStorage.removeItem(storageKey);
     } catch {
-      setError('Download failed. Please try again.');
+      setError(da ? 'Download fejlede. Prøv igen.' : 'Download failed. Please try again.');
     } finally {
       setDownloading(false);
     }
   }
 
-  // ── Job title also gets inline bias check ──
+  // ── Helper: title bias violations ──
   const titleViolations = jobTitle.trim() ? checkBulletBias(jobTitle, language) : [];
+  const wordCountFinal = finalContent.trim().split(/\s+/).filter(Boolean).length;
+  const wordCountA = variantA.trim().split(/\s+/).filter(Boolean).length;
+  const wordCountB = variantB.trim().split(/\s+/).filter(Boolean).length;
 
-  return (
-    <div className="tier1-page">
-      <nav className="top-nav">
-        <button className="link-btn" onClick={() => navigate('/dashboard')}>← Dashboard</button>
-        <span className="nav-brand">Quick Job Post</span>
-        <span className="nav-user">{project.name}</span>
-      </nav>
+  // ═══════════════════════════════════════════════════════════
+  // RENDER — scope wrapper changes per step
+  // ═══════════════════════════════════════════════════════════
 
-      <div className="tier1-body">
-        <StepIndicator current={step} />
-
-        {/* ── INPUT ── */}
-        {step === 'input' && (
-          <form className="input-form card" onSubmit={handleFormSubmit}>
-            <h2 className="form-heading">Create your job posting</h2>
-
-            <div className="form-section">
-              <label className="form-label">Output language</label>
-              <div className="language-toggle">
-                <button type="button" className={`lang-btn ${language === 'da' ? 'active' : ''}`} onClick={() => setLanguage('da')}>Danish</button>
-                <button type="button" className={`lang-btn ${language === 'en' ? 'active' : ''}`} onClick={() => setLanguage('en')}>English</button>
-              </div>
-            </div>
-
-            <div className="form-section">
-              <label className="form-label" htmlFor="job-title">Job title</label>
-              <input
-                id="job-title"
-                type="text"
-                className="form-input"
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-                placeholder="e.g. Senior Software Engineer"
-                maxLength={200}
-                required
-              />
-              {titleViolations.length > 0 && (
-                <div className="inline-bias-list" style={{ marginTop: '0.375rem' }}>
-                  {titleViolations.map((v, i) => (
-                    <div key={i} className={`inline-bias inline-bias-${v.severity}`}>
-                      <span className={`bias-badge badge-${v.severity}`}>{v.severity}</span>
-                      <span className="inline-bias-label">{v.label}:</span>
-                      <span className="inline-bias-matches">{v.matchedTexts.map((t) => `"${t}"`).join(', ')}</span>
-                      <span className="inline-bias-tip">{v.suggestion}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="form-section">
-              <label className="form-label">
-                About the role
-                <span className="form-hint"> — 5–10 bullets about responsibilities and what you're looking for</span>
-              </label>
-              <BulletInput
-                bullets={bullets}
-                onChange={setBullets}
-                language={language}
-                challengeMap={challengeMap}
-                loadingIndices={loadingIndices}
-                onDismissChallenge={dismissChallenge}
-                onAcceptChallenge={handleAcceptChallenge}
-              />
-            </div>
-
-            <div className="form-row">
-              <div className="form-section form-col">
-                <label className="form-label" htmlFor="location">Location <span className="form-hint">(optional)</span></label>
-                <input
-                  id="location"
-                  type="text"
-                  className="form-input"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. Copenhagen / Remote"
-                  maxLength={100}
-                />
-              </div>
-              <div className="form-section form-col">
-                <label className="form-label" htmlFor="start-date">Start date <span className="form-hint">(optional)</span></label>
-                <input
-                  id="start-date"
-                  type="text"
-                  className="form-input"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  placeholder="e.g. ASAP / 1 Aug 2026"
-                  maxLength={50}
-                />
-              </div>
-              <div className="form-section form-col">
-                <label className="form-label" htmlFor="employment-type">Employment type <span className="form-hint">(optional)</span></label>
-                <select
-                  id="employment-type"
-                  className="form-input"
-                  value={employmentType}
-                  onChange={(e) => setEmploymentType(e.target.value)}
-                >
-                  <option value="">— select —</option>
-                  <option value="Full-time">Full-time</option>
-                  <option value="Part-time">Part-time</option>
-                  <option value="Contract">Contract</option>
-                  <option value="Freelance">Freelance</option>
-                  <option value="Internship">Internship</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="form-section">
-              <label className="form-label">
-                Company template <span className="form-hint">(optional — .docx)</span>
-              </label>
-              <p className="form-hint" style={{ marginBottom: '0.5rem' }}>
-                Upload an existing job posting to match your company's tone and structure.
-              </p>
-              <input
-                type="file"
-                accept=".docx"
-                className="file-input"
-                onChange={(e) => setTemplateFile(e.target.files[0] || null)}
-              />
-              {templateFile && (
-                <div className="file-selected">
-                  <span>{templateFile.name}</span>
-                  <button type="button" className="remove-file" onClick={() => setTemplateFile(null)}>×</button>
-                </div>
-              )}
-            </div>
-
-            {error && <p className="error-text">{error}</p>}
-
-            <button
-              type="submit"
-              className="generate-btn"
-              disabled={loadingIndices.size > 0}
-            >
-              {loadingIndices.size > 0
-                ? (language === 'da' ? 'Tjekker input mod forskning...' : 'Checking input against research...')
-                : (language === 'da' ? 'Generer jobopslag →' : 'Generate job posting →')}
-            </button>
-          </form>
-        )}
-
-        {/* ── CHECKLIST ── */}
-        {step === 'checklist' && (
+  // ── CHECKLIST step (delegates to InputCompletenessCheck) ──
+  if (step === 'checklist') {
+    return (
+      <div className="app s-completeness">
+        <TopBar active="projects" />
+        <main>
           <InputCompletenessCheck
             jobTitle={jobTitle}
             bullets={bullets.filter((b) => b.trim())}
@@ -767,141 +681,626 @@ export function Tier1Page({ project }) {
             onBack={() => setStep('input')}
             onProceed={doGenerate}
           />
-        )}
+        </main>
+      </div>
+    );
+  }
 
-        {/* ── REFUSED ── */}
-        {step === 'refused' && (
-          <div className="card refused-panel">
-            <div className="refused-icon">⚠️</div>
-            <h2 className="refused-title">
-              {language === 'da' ? 'Indhold kan ikke genereres' : 'Content cannot be generated'}
-            </h2>
-            <p className="refused-body">
-              {language === 'da'
+  // ── GENERATING step ──
+  if (step === 'generating') {
+    return (
+      <div className="app">
+        <TopBar active="projects" />
+        <main>
+          <div className="steps-bar">
+            <Steps steps={STEP_STATES.generating} />
+          </div>
+          <div className="generating-screen">
+            <div className="spinner" />
+            <h2>{da ? 'Genererer 2 varianter…' : 'Generating 2 variants…'}</h2>
+            <p>
+              {da
+                ? 'Kører bias-tjek · Kalder Claude AI · Tager typisk 10–20 sekunder'
+                : 'Running bias checks · Calling Claude AI · Usually 10–20 seconds'}
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ── REFUSED step ──
+  if (step === 'refused') {
+    return (
+      <div className="app">
+        <TopBar active="projects" />
+        <main>
+          <div className="refused-screen">
+            <span className="refused-icon">⚠</span>
+            <h2>{da ? 'Indhold kan ikke genereres' : 'Content cannot be generated'}</h2>
+            <p>
+              {da
                 ? 'Dette indhold kan ikke genereres, da det strider mod vores retningslinjer.'
                 : 'This content cannot be generated as it violates our guidelines.'}
             </p>
-            <p className="refused-hint">
-              {language === 'da'
-                ? 'Prøv at omformulere din jobtitel og bullets.'
-                : 'Try rephrasing your job title and bullets.'}
+            <p style={{ fontSize: 14, color: 'var(--ink-3)' }}>
+              {da ? 'Prøv at omformulere din jobtitel og punkter.' : 'Try rephrasing your job title and bullets.'}
             </p>
-            <button type="button" className="link-btn" onClick={() => setStep('input')}>
-              {language === 'da' ? '← Rediger input' : '← Edit inputs'}
+            <button className="btn btn-secondary" onClick={() => setStep('input')}>
+              ← {da ? 'Rediger input' : 'Edit inputs'}
             </button>
           </div>
-        )}
+        </main>
+      </div>
+    );
+  }
 
-        {/* ── GENERATING ── */}
-        {step === 'generating' && (
-          <div className="generating-state card">
-            <div className="spinner" />
-            <p className="generating-title">Generating 2 variants...</p>
-            <p className="generating-sub">Running bias checks · Calling Claude AI · Usually 10–20 seconds</p>
+  // ── RESULTS step ──
+  if (step === 'results') {
+    const histCount = previousVariants.length;
+    return (
+      <div className="app s-review">
+        <TopBar active="projects" />
+        <main className="work">
+          <div className="steps-bar">
+            <Steps steps={STEP_STATES.results} />
           </div>
-        )}
 
-        {/* ── RESULTS ── */}
-        {step === 'results' && (
-          <div className="results-step">
-            <div className="results-header">
-              <div>
-                <h2 className="results-title">{jobTitle}</h2>
-                <p className="results-sub">{language === 'da' ? 'Dansk' : 'English'} · 2 variants generated</p>
+          <section className="review-head">
+            <div className="eyebrow">
+              {da ? 'Trin 4 af 4 · Gennemse' : 'Step 4 of 4 · Review'}
+            </div>
+            <h1>{jobTitle}</h1>
+            <div className="sub">
+              <span className="lang">{da ? 'Dansk' : 'English'}</span>
+              {' · '}
+              {da ? '2 varianter genereret' : '2 variants generated'}
+            </div>
+            <div className="back-link">
+              <button type="button" className="link-back" onClick={() => setStep('checklist')}>
+                <span className="arrow">←</span>
+                {da ? 'Rediger input' : 'Edit inputs'}
+              </button>
+            </div>
+          </section>
+
+          {biasWarnings.length > 0 && <BiasPanel warnings={biasWarnings} language={language} />}
+
+          <div className="variants">
+            {/* Variant A */}
+            <div className={`variant${selectedVariant === 'A' ? ' selected' : ''}`}>
+              <div className="v-head">
+                <div className="v-name">
+                  <h2>Variant A</h2>
+                </div>
+                <span className="wordcount">{wordCountA} {da ? 'ord' : 'words'}</span>
               </div>
-              <button type="button" className="link-btn" onClick={() => setStep('input')}>← Edit inputs</button>
+              <div className="v-body">
+                <JobPostingPreview content={variantA} />
+              </div>
+              <div className="v-foot">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => handleSelectVariant('A')}
+                >
+                  {da ? 'Vælg Variant A' : 'Select Variant A'}
+                </button>
+                <span className="selected-flag">
+                  <span className="ok">✓</span>
+                  {da ? 'Variant A valgt' : 'Variant A selected'}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => { handleSelectVariant('A'); setStep('finalize'); }}
+                >
+                  {da ? 'Rediger' : 'Edit'}
+                </button>
+              </div>
             </div>
 
-            {biasWarnings.length > 0 && <BiasPanel warnings={biasWarnings} />}
-
-            <div className="variants-grid">
-              <VariantCard
-                label="A"
-                content={variantA}
-                onSelect={() => selectVariant('A')}
-                selected={selectedVariant === 'A'}
-              />
-              <VariantCard
-                label="B"
-                content={variantB}
-                onSelect={() => selectVariant('B')}
-                selected={selectedVariant === 'B'}
-              />
+            {/* Variant B */}
+            <div className={`variant${selectedVariant === 'B' ? ' selected' : ''}`}>
+              <div className="v-head">
+                <div className="v-name">
+                  <h2>Variant B</h2>
+                </div>
+                <span className="wordcount">{wordCountB} {da ? 'ord' : 'words'}</span>
+              </div>
+              <div className="v-body">
+                <JobPostingPreview content={variantB} />
+              </div>
+              <div className="v-foot">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => handleSelectVariant('B')}
+                >
+                  {da ? 'Vælg Variant B' : 'Select Variant B'}
+                </button>
+                <span className="selected-flag">
+                  <span className="ok">✓</span>
+                  {da ? 'Variant B valgt' : 'Variant B selected'}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => { handleSelectVariant('B'); setStep('finalize'); }}
+                >
+                  {da ? 'Rediger' : 'Edit'}
+                </button>
+              </div>
             </div>
-
-            <div className="mix-row">
-              <button type="button" className="mix-btn" onClick={startMix}>Customize and mix →</button>
-            </div>
-
-            <PreviousVariants
-              variants={previousVariants}
-              language={language}
-              onLoad={(pv) => {
-                setVariantA(pv.variant_a || '');
-                setVariantB(pv.variant_b || '');
-                setBiasWarnings([]);
-                setSelectedVariant(null);
-              }}
-            />
           </div>
-        )}
 
-        {/* ── FINALIZE ── */}
-        {step === 'finalize' && (
-          <div className={selectedVariant === 'mix' ? 'finalize-step finalize-mix' : 'finalize-step card'}>
-            <div className="finalize-header">
-              <div>
-                <h2 className="form-heading">
-                  {selectedVariant === 'mix' ? 'Mix & match your posting' : `Variant ${selectedVariant} — edit and download`}
-                </h2>
-                <p className="form-hint">
-                  {selectedVariant === 'mix'
-                    ? 'Drag or click sections from Variant A and B into the center, then edit freely.'
-                    : 'Edit the text below before downloading.'}
-                </p>
-              </div>
-              <button type="button" className="link-btn" onClick={() => setStep('results')}>← Back to variants</button>
-            </div>
+          <div className="mix-cta">
+            <button type="button" className="btn btn-secondary btn-lg" onClick={startMix}>
+              {da ? 'Mix og tilpas' : 'Mix & customise'}
+              <span className="arrow">→</span>
+            </button>
+            <span className="note">
+              {da
+                ? 'Vælg de bedste afsnit fra begge varianter og sæt dem sammen'
+                : 'Pick the best sections from both variants and combine them'}
+            </span>
+          </div>
 
-            {selectedVariant === 'mix' ? (
-              <MixEditor
-                variantA={variantA}
-                variantB={variantB}
-                value={finalContent}
-                onChange={setFinalContent}
-              />
-            ) : (
-              <div className="form-section" style={{ marginTop: '1.25rem' }}>
-                <label className="form-label">Final job posting</label>
-                <textarea
-                  className="mix-textarea"
-                  value={finalContent}
-                  onChange={(e) => setFinalContent(e.target.value)}
-                  rows={22}
-                />
-              </div>
-            )}
-
-            {error && <p className="error-text">{error}</p>}
-
-            <div className="download-section">
+          {/* Previous variants history */}
+          {histCount > 0 && (
+            <div className={`history${historyOpen ? ' open' : ''}`}>
               <button
                 type="button"
-                className="download-btn"
+                className="history-toggle"
+                onClick={() => setHistoryOpen((v) => !v)}
+              >
+                <h2>
+                  {da ? 'Tidligere genereringer' : 'Earlier generations'}
+                  <span className="count">{histCount}</span>
+                </h2>
+                <span className="chev">▾</span>
+              </button>
+              <div className="history-body">
+                {previousVariants.map((pv, i) => (
+                  <div key={i} className="hist-row">
+                    <span className="h-when">
+                      {new Date(pv.generated_at).toLocaleString(da ? 'da-DK' : 'en-GB', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </span>
+                    <span className="h-meta">2 {da ? 'varianter' : 'variants'}</span>
+                    <button
+                      type="button"
+                      className="h-link"
+                      onClick={() => {
+                        setVariantA(pv.variant_a || '');
+                        setVariantB(pv.variant_b || '');
+                        setBiasWarnings([]);
+                        setSelectedVariant(null);
+                      }}
+                    >
+                      {da ? 'Indlæs denne' : 'Load this'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Confirm bar (appears when a variant is selected) */}
+          <div className={`confirm-bar${selectedVariant && selectedVariant !== 'mix' ? ' show' : ''}`}>
+            <div className="confirm-inner">
+              <span className="what">
+                <strong>Variant {selectedVariant}</strong>{' '}
+                {da ? 'er valgt' : 'selected'}
+              </span>
+              <button
+                type="button"
+                className="btn btn-primary btn-lg"
+                onClick={confirmVariant}
+              >
+                {da ? 'Gå videre til download' : 'Continue to download'}
+                <span className="arrow">→</span>
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ── FINALIZE (mix) step ──
+  if (step === 'finalize' && selectedVariant === 'mix') {
+    return (
+      <div className="app s-mix">
+        <header className="mix-topbar">
+          <div className="left">
+            <button
+              type="button"
+              className="link-back"
+              onClick={() => setStep('results')}
+            >
+              <span className="arrow">←</span>
+            </button>
+            <div className="ttl">
+              {da ? 'Tilpas og mix' : 'Mix & customise'}
+              <span className="sub">
+                {jobTitle} · {da ? 'Dansk' : 'English'}
+              </span>
+            </div>
+          </div>
+          <Steps steps={STEP_STATES.finalize} />
+        </header>
+
+        <MixEditor
+          variantA={variantA}
+          variantB={variantB}
+          value={finalContent}
+          onChange={setFinalContent}
+          language={language}
+        />
+
+        <footer className="mix-foot">
+          <div className="status">
+            <strong>{da ? 'Dit opslag' : 'Your posting'}</strong>
+            {' · '}
+            {wordCountFinal} {da ? 'ord' : 'words'}
+          </div>
+          <div className="actions">
+            {error && <span className="error-text" style={{ marginRight: 12 }}>{error}</span>}
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setStep('results')}
+            >
+              {da ? 'Annullér' : 'Cancel'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleDownload}
+              disabled={downloading || !finalContent.trim()}
+            >
+              {downloading
+                ? (da ? 'Forbereder…' : 'Preparing…')
+                : (da ? 'Download .docx' : 'Download .docx')}
+              {!downloading && <span className="arrow">→</span>}
+            </button>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // ── FINALIZE (A/B variant) step ──
+  if (step === 'finalize') {
+    return (
+      <div className="app s-review">
+        <TopBar active="projects" />
+        <main className="work">
+          <div className="steps-bar">
+            <Steps steps={STEP_STATES.finalize} />
+          </div>
+
+          <section className="review-head" style={{ paddingBottom: 'var(--s-5)' }}>
+            <div className="eyebrow">
+              {da ? 'Download' : 'Download'}
+            </div>
+            <h1>{jobTitle}</h1>
+            <div className="sub">
+              Variant {selectedVariant} · {da ? 'Dansk' : 'English'}
+            </div>
+            <div className="back-link">
+              <button type="button" className="link-back" onClick={() => setStep('results')}>
+                <span className="arrow">←</span>
+                {da ? 'Varianter' : 'Variants'}
+              </button>
+            </div>
+          </section>
+
+          <div className="edit-section">
+            <div className="field">
+              <label className="field-label">
+                {da ? 'Rediger inden download' : 'Edit before download'}
+              </label>
+              <div className="hint" style={{ marginBottom: 'var(--s-3)', fontSize: 13, color: 'var(--ink-3)' }}>
+                {da
+                  ? `${wordCountFinal} ord · Klik og rediger direkte i teksten`
+                  : `${wordCountFinal} words · Click to edit directly`}
+              </div>
+              <textarea
+                className="textarea"
+                value={finalContent}
+                onChange={(e) => setFinalContent(e.target.value)}
+                rows={22}
+              />
+            </div>
+          </div>
+
+          {error && <p className="error-text">{error}</p>}
+
+          <div className="actionbar">
+            <div className="actionbar-inner">
+              <div className="meta">
+                <span>
+                  {da ? 'Gemmes som' : 'Saved as'} .docx
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary btn-lg"
                 onClick={handleDownload}
                 disabled={downloading || !finalContent.trim()}
               >
-                {downloading ? 'Preparing...' : 'Download as .docx →'}
+                {downloading
+                  ? (da ? 'Forbereder…' : 'Preparing…')
+                  : (da ? 'Download som .docx' : 'Download as .docx')}
+                {!downloading && <span className="arrow">→</span>}
               </button>
-              <p className="download-hint">
-                {language === 'da'
-                  ? 'Gemmes som Word-dokument og markerer projektet som færdigt'
-                  : 'Saves as a Word document and marks the project as completed'}
-              </p>
             </div>
           </div>
-        )}
+        </main>
       </div>
+    );
+  }
+
+  // ── INPUT step (default) ──
+  const openChallenges = Object.keys(challengeMap).length;
+  return (
+    <div className="app s-input">
+      <TopBar active="projects" />
+      <main>
+        <div className="work">
+          {/* Back + eyebrow */}
+          <div className="work-top">
+            <button
+              type="button"
+              className="link-back"
+              onClick={() => navigate('/dashboard')}
+            >
+              <span className="arrow">←</span>
+              {da ? 'Projekter' : 'Projects'}
+            </button>
+            <div className="hide-mobile">
+              <Steps steps={STEP_STATES.input} />
+            </div>
+          </div>
+
+          {/* Intro */}
+          <section className="intro">
+            <div className="eyebrow">
+              {da ? 'Nyt jobopslag · Tier 1' : 'New job posting · Tier 1'}
+            </div>
+            <h1>{da ? 'Fortæl om rollen' : 'Tell us about the role'}</h1>
+            <p>
+              {da
+                ? 'Skriv jobtitlen og 5–10 punkter om, hvad jobbet faktisk indebærer. Vi udfordrer dig undervejs, hvor forskningen siger noget andet.'
+                : 'Write the job title and 5–10 bullets about what the role actually involves. We challenge you where the research says otherwise.'}
+            </p>
+          </section>
+
+          {/* Language toggle */}
+          <div className="outlang">
+            <span className="lbl">{da ? 'Opslaget skrives på' : 'Posting language'}</span>
+            <div className="seg">
+              <button
+                type="button"
+                className={language === 'da' ? 'on' : ''}
+                onClick={() => setLanguage('da')}
+              >
+                🇩🇰 Dansk
+              </button>
+              <button
+                type="button"
+                className={language === 'en' ? 'on' : ''}
+                onClick={() => setLanguage('en')}
+              >
+                🇬🇧 English
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleFormSubmit}>
+            {/* Job title */}
+            <section className="block">
+              <div className="block-head">
+                <h2>{da ? 'Jobtitel' : 'Job title'}</h2>
+                <div className="sub">
+                  {da ? 'Den titel kandidaterne ser øverst i opslaget.' : 'The title candidates see at the top.'}
+                </div>
+              </div>
+              <input
+                type="text"
+                className="input input-lg"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                placeholder={da ? 'fx Senior HR-konsulent' : 'e.g. Senior Software Engineer'}
+                maxLength={200}
+                required
+              />
+              {titleViolations.length > 0 && (
+                <div className="inline-bias-list" style={{ marginTop: 'var(--s-2)' }}>
+                  {titleViolations.map((v, i) => (
+                    <div key={i} className={`inline-bias inline-bias-${v.severity}`}>
+                      <span className="inline-bias-label">{v.label}:</span>
+                      <span className="inline-bias-matches">
+                        {v.matchedTexts.map((t) => `"${t}"`).join(', ')}
+                      </span>
+                      <span className="inline-bias-tip">{v.suggestion}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Bullets */}
+            <section className="block">
+              <div className="block-head">
+                <h2>
+                  {da ? 'Om rollen' : 'About the role'}
+                  <span className="bullet-count">
+                    {bullets.filter((b) => b.trim()).length} / 10
+                  </span>
+                </h2>
+                <div className="sub">
+                  {da
+                    ? 'Konkrete ansvarsområder, krav og rammer. Ét punkt pr. linje.'
+                    : 'Concrete responsibilities, requirements and context. One bullet per line.'}
+                </div>
+              </div>
+              <BulletInput
+                bullets={bullets}
+                onChange={setBullets}
+                language={language}
+                challengeMap={challengeMap}
+                loadingIndices={loadingIndices}
+                onDismissChallenge={dismissChallenge}
+                onAcceptChallenge={handleAcceptChallenge}
+              />
+            </section>
+
+            {/* Details */}
+            <section className="block">
+              <div className="block-head">
+                <h2>{da ? 'Detaljer' : 'Details'} <span className="optional">{da ? 'valgfrit' : 'optional'}</span></h2>
+                <div className="sub">
+                  {da ? 'Udfyld det, du kender. Resten kan tilføjes senere.' : 'Fill in what you know. The rest can be added later.'}
+                </div>
+              </div>
+              <div className="detail-grid">
+                <div className="field">
+                  <label>{da ? 'Lokation' : 'Location'}</label>
+                  <input
+                    className="input"
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder={da ? 'fx København Ø' : 'e.g. Copenhagen / Remote'}
+                    maxLength={100}
+                  />
+                </div>
+                <div className="field">
+                  <label>{da ? 'Startdato' : 'Start date'}</label>
+                  <input
+                    className="input"
+                    type="text"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    placeholder={da ? 'fx 1. august 2026' : 'e.g. ASAP / 1 Aug 2026'}
+                    maxLength={50}
+                  />
+                </div>
+                <div className="field">
+                  <label>{da ? 'Ansættelsestype' : 'Employment type'}</label>
+                  <select
+                    className="select"
+                    value={employmentType}
+                    onChange={(e) => setEmploymentType(e.target.value)}
+                  >
+                    <option value="">{da ? 'Vælg type' : 'Select type'}</option>
+                    <option value="Fuldtid">{da ? 'Fuldtid' : 'Full-time'}</option>
+                    <option value="Deltid">{da ? 'Deltid' : 'Part-time'}</option>
+                    <option value="Tidsbegrænset">{da ? 'Tidsbegrænset' : 'Fixed-term'}</option>
+                    <option value="Vikariat">{da ? 'Vikariat' : 'Temporary cover'}</option>
+                    <option value="Freelance">Freelance</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>{da ? 'Arbejdsform' : 'Work mode'}</label>
+                  <select
+                    className="select"
+                    value={workMode}
+                    onChange={(e) => setWorkMode(e.target.value)}
+                  >
+                    <option value="">{da ? 'Vælg arbejdsform' : 'Select work mode'}</option>
+                    <option value="På kontoret">{da ? 'På kontoret' : 'On-site'}</option>
+                    <option value="Hybrid">Hybrid</option>
+                    <option value="Fuldt remote">{da ? 'Fuldt remote' : 'Fully remote'}</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            {/* Template upload */}
+            <section className="block">
+              <div className="block-head">
+                <h2>
+                  {da ? 'Virksomhedsskabelon' : 'Company template'}
+                  <span className="optional">{da ? 'valgfrit' : 'optional'}</span>
+                </h2>
+                <div className="sub">
+                  {da
+                    ? 'Upload en .docx, så opslaget følger jeres tone og opsætning.'
+                    : 'Upload a .docx so the posting matches your tone and layout.'}
+                </div>
+              </div>
+              <label className={`upload${templateFile ? ' has-file' : ''}`}>
+                <span className="icon">{templateFile ? '✓' : '↑'}</span>
+                <span>
+                  {templateFile ? (
+                    <>
+                      <span className="up-title">{templateFile.name}</span>
+                      <br />
+                      <span className="up-sub">
+                        <button
+                          type="button"
+                          className="link-btn"
+                          style={{ fontSize: 12 }}
+                          onClick={(e) => { e.preventDefault(); setTemplateFile(null); }}
+                        >
+                          {da ? 'Fjern' : 'Remove'}
+                        </button>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="up-title">
+                        {da ? 'Træk en fil hertil, eller vælg' : 'Drag a file here, or browse'}
+                      </span>
+                      <br />
+                      <span className="up-sub">.docx · {da ? 'maks 5 MB' : 'max 5 MB'}</span>
+                    </>
+                  )}
+                </span>
+                <input
+                  type="file"
+                  accept=".docx"
+                  hidden
+                  onChange={(e) => setTemplateFile(e.target.files[0] || null)}
+                />
+              </label>
+            </section>
+
+            {error && <p className="error-text">{error}</p>}
+
+            <div className="actionbar">
+              <div className="actionbar-inner">
+                <div className="meta">
+                  {loadingIndices.size > 0 ? (
+                    <>
+                      <span className="bullet-loading-dot" style={{ marginRight: 8 }} aria-hidden="true" />
+                      {da ? 'Tjekker mod forskning…' : 'Checking against research…'}
+                    </>
+                  ) : openChallenges > 0 ? (
+                    <><strong>{openChallenges}</strong> {da ? `forslag venter på dit svar` : `suggestion${openChallenges !== 1 ? 's' : ''} awaiting your response`}</>
+                  ) : (
+                    <><strong>{da ? 'Klar til at generere' : 'Ready to generate'}</strong></>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-lg"
+                  disabled={loadingIndices.size > 0}
+                >
+                  {da ? 'Generer jobopslag' : 'Generate job posting'}
+                  <span className="arrow">→</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </main>
     </div>
   );
 }
