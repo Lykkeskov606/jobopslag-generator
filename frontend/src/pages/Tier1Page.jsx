@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
 import { checkBulletBias } from '../lib/biasRules';
 import { runCompletenessCheck } from '../lib/completenessRules';
@@ -20,7 +21,7 @@ function InlineBiasWarnings({ text, language }) {
         <div key={i} className={`inline-bias inline-bias-${v.severity}`}>
           <span className="inline-bias-label">{v.label}:</span>
           <span className="inline-bias-matches">
-            {v.matchedTexts.map((t) => `"${t}"`).join(', ')}
+            {v.matchedTexts.map((m) => `"${m}"`).join(', ')}
           </span>
           <span className="inline-bias-tip">{v.suggestion}</span>
         </div>
@@ -32,7 +33,22 @@ function InlineBiasWarnings({ text, language }) {
 // ─── Bullet inputs ────────────────────────────────────────────────────────────
 
 function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIndices = new Set(), onDismissChallenge, onAcceptChallenge }) {
+  const { t, i18n } = useTranslation();
   const refs = useRef([]);
+  const prevMapRef = useRef({});
+
+  // Fix 8: scroll-anchor active element when new challenges appear
+  useEffect(() => {
+    const newKeys = Object.keys(challengeMap).filter((k) => !(k in prevMapRef.current));
+    prevMapRef.current = challengeMap;
+    if (newKeys.length > 0) {
+      requestAnimationFrame(() => {
+        document.activeElement?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+      });
+    }
+  }, [challengeMap]);
+
+  const da = i18n.language === 'da';
 
   function update(i, val) {
     const next = [...bullets];
@@ -64,7 +80,12 @@ function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIn
     }
   }
 
-  const da = language !== 'en';
+  // Fix 6: auto-resize textarea height
+  function autoResize(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 96) + 'px';
+  }
 
   return (
     <div className="bullets">
@@ -72,18 +93,20 @@ function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIn
         <div key={i} className="bullet-wrap">
           <div className="bullet">
             <span className="num">{i + 1}</span>
-            <input
+            <textarea
               ref={(el) => { refs.current[i] = el; }}
-              type="text"
               className="input"
+              rows={1}
               value={b}
-              onChange={(e) => update(i, e.target.value)}
+              onChange={(e) => { update(i, e.target.value); autoResize(e.target); }}
+              onFocus={(e) => autoResize(e.target)}
               onKeyDown={(e) => handleKeyDown(e, i)}
               placeholder={
                 i === 0
-                  ? (da ? 'Beskriv et ansvarsområde, krav eller rammer' : 'Key responsibility or requirement')
-                  : (da ? 'Endnu et punkt…' : 'Another point…')
+                  ? t('tier1.bulletPlaceholder')
+                  : t('tier1.bulletMore')
               }
+              style={{ resize: 'none', overflow: 'hidden' }}
             />
             {loadingIndices.has(i) && b.trim() ? (
               <span className="b-loading">
@@ -94,7 +117,7 @@ function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIn
                 <button
                   type="button"
                   className="remove"
-                  aria-label="Fjern"
+                  aria-label={da ? 'Fjern' : 'Remove'}
                   onClick={() => remove(i)}
                 >
                   ×
@@ -116,7 +139,7 @@ function BulletInput({ bullets, onChange, language, challengeMap = {}, loadingIn
       {bullets.length < 10 && (
         <button type="button" className="add-bullet" onClick={add}>
           <span className="plus">+</span>
-          {da ? 'Tilføj punkt' : 'Add bullet'}
+          {t('tier1.addBullet')}
         </button>
       )}
     </div>
@@ -150,9 +173,10 @@ function JobPostingPreview({ content }) {
 // ─── Bias pill + expandable panel ────────────────────────────────────────────
 
 function BiasPanel({ warnings, language }) {
+  const { t, i18n } = useTranslation();
   const [dismissed, setDismissed] = useState(new Set());
   const [expanded, setExpanded] = useState(false);
-  const da = language !== 'en';
+  const da = i18n.language === 'da';
 
   function key(w) { return `${w.category}-${w.matchedText || w.message}`; }
   function dismiss(w) { setDismissed((p) => new Set([...p, key(w)])); }
@@ -174,7 +198,7 @@ function BiasPanel({ warnings, language }) {
               {w.message    && <span className="bias-msg">{w.message}</span>}
             </div>
             <button type="button" className="dismiss-bw" onClick={() => dismiss(w)}>
-              {da ? 'Ignorer' : 'Dismiss'}
+              {t('tier1.biasIgnore')}
             </button>
           </div>
         ))}
@@ -186,13 +210,9 @@ function BiasPanel({ warnings, language }) {
     <>
       <div className="bias-notice">
         <span className="ico" />
-        <span>
-          {visible.length} {da ? 'mulig' : 'potential'}{visible.length !== 1 ? (da ? 'e' : '') : ''}{' '}
-          bias{da ? '-markering' : ' issue'}{visible.length !== 1 ? (da ? 'er' : 's') : ''}
-          {da ? ' fundet' : ' found'}
-        </span>
+        <span>{t('tier1.biasFound', { count: visible.length })}</span>
         <button type="button" onClick={() => setExpanded((e) => !e)}>
-          {expanded ? (da ? 'Skjul' : 'Hide') : (da ? 'Vis detaljer' : 'Show details')}
+          {expanded ? t('tier1.hideDetails') : t('tier1.showDetails')}
         </button>
       </div>
       {expanded && (
@@ -220,7 +240,8 @@ function getBlockTag(text, da) {
 }
 
 function SourceCol({ side, label, src, usedKeys, srcPrefix, onAdd, language }) {
-  const da = language !== 'en';
+  const { t, i18n } = useTranslation();
+  const da = i18n.language === 'da';
   return (
     <div className={`panel-col source ${side}`}>
       <div className="col-head">
@@ -230,8 +251,8 @@ function SourceCol({ side, label, src, usedKeys, srcPrefix, onAdd, language }) {
         </div>
         <div className="hint">
           {side === 'left'
-            ? (da ? 'Klik for at tilføje →' : 'Click to add →')
-            : (da ? '← Klik for at tilføje' : '← Click to add')}
+            ? t('tier1.clickToAddRight')
+            : t('tier1.clickToAddLeft')}
         </div>
       </div>
       <div className="col-scroll">
@@ -260,7 +281,8 @@ function SourceCol({ side, label, src, usedKeys, srcPrefix, onAdd, language }) {
 }
 
 function MixEditor({ variantA, variantB, value, onChange, language }) {
-  const da = language !== 'en';
+  const { t, i18n } = useTranslation();
+  const da = i18n.language === 'da';
   const sectionsA = splitToSections(variantA);
   const sectionsB = splitToSections(variantB);
 
@@ -316,6 +338,13 @@ function MixEditor({ variantA, variantB, value, onChange, language }) {
     setEditingId(null);
   }
 
+  // Fix 7: auto-resize mix editor textarea
+  function autoResizeMix(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+
   function handleDrop(e) {
     e.preventDefault();
     const payload = e.dataTransfer.getData('text/plain');
@@ -340,25 +369,21 @@ function MixEditor({ variantA, variantB, value, onChange, language }) {
       >
         <div className="ws-head">
           <div className="ttl">
-            <h2>{da ? 'Dit opslag' : 'Your posting'}</h2>
+            <h2>{t('tier1.wsTitle')}</h2>
             <span className="meta">
-              {doc.length} {da ? 'afsnit' : 'sections'} · {da ? 'ca.' : '~'} {words} {da ? 'ord' : 'words'}
+              {doc.length} {t('tier1.sections')} · {t('tier1.approx')} {words} {t('tier1.words')}
             </span>
           </div>
           <button className="clear" onClick={() => setDoc([])}>
-            {da ? 'Ryd alt' : 'Clear all'}
+            {t('tier1.clearAll')}
           </button>
         </div>
         <div className="ws-scroll">
           <div className={`ws-doc${doc.length === 0 ? ' empty-state' : ''}`}>
             {doc.length === 0 ? (
               <div className="ws-empty">
-                <span className="serif">
-                  {da ? 'Klik på et afsnit for at tilføje det' : 'Click a section to add it'}
-                </span>
-                <span className="sm">
-                  {da ? 'Eller træk sektioner hertil' : 'Or drag sections here'}
-                </span>
+                <span className="serif">{t('tier1.wsEmpty')}</span>
+                <span className="sm">{t('tier1.wsEmptySub')}</span>
               </div>
             ) : (
               doc.map((block, idx) => (
@@ -397,13 +422,14 @@ function MixEditor({ variantA, variantB, value, onChange, language }) {
                       className="textarea"
                       autoFocus
                       value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
+                      onChange={(e) => { setEditText(e.target.value); autoResizeMix(e.target); }}
+                      onFocus={(e) => autoResizeMix(e.target)}
                       onBlur={() => saveEdit(block.id)}
                       onClick={(e) => e.stopPropagation()}
                       style={{
                         fontFamily: 'var(--serif)', fontSize: 15.5, lineHeight: 1.65,
                         border: 'none', outline: 'none', background: 'transparent',
-                        resize: 'vertical', minHeight: 60, width: '100%',
+                        resize: 'vertical', minHeight: 120, width: '100%',
                       }}
                     />
                   ) : (
@@ -435,21 +461,11 @@ function makeInputsHash(jobTitle, bullets, language, location, startDate, employ
   });
 }
 
-// ─── Steps config ─────────────────────────────────────────────────────────────
-
-const STEP_STATES = {
-  input:      [{ label: 'Input', state: 'active', n: 1 }, { label: 'Tjek', state: 'default', n: 2 }, { label: 'Generer', state: 'default', n: 3 }, { label: 'Download', state: 'default', n: 4 }],
-  checklist:  [{ label: 'Input', state: 'done' },          { label: 'Tjek', state: 'active', n: 2 }, { label: 'Generer', state: 'default', n: 3 }, { label: 'Download', state: 'default', n: 4 }],
-  generating: [{ label: 'Input', state: 'done' },          { label: 'Tjek', state: 'done' },         { label: 'Generer', state: 'active', n: 3 }, { label: 'Download', state: 'default', n: 4 }],
-  results:    [{ label: 'Input', state: 'done' },          { label: 'Tjek', state: 'done' },         { label: 'Generer', state: 'done' },         { label: 'Download', state: 'active', n: 4 }],
-  finalize:   [{ label: 'Input', state: 'done' },          { label: 'Tjek', state: 'done' },         { label: 'Generer', state: 'done' },         { label: 'Download', state: 'active', n: 4 }],
-  refused:    [{ label: 'Input', state: 'active', n: 1 }, { label: 'Tjek', state: 'default', n: 2 }, { label: 'Generer', state: 'default', n: 3 }, { label: 'Download', state: 'default', n: 4 }],
-};
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function Tier1Page({ project }) {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const storageKey = `tier1-draft-${project.id}`;
 
   const [step, setStep]                       = useState('input');
@@ -471,8 +487,20 @@ export function Tier1Page({ project }) {
   const [previousVariants, setPreviousVariants] = useState([]);
   const [historyOpen, setHistoryOpen]         = useState(false);
   const lastGenHashRef = useRef(null);
+  const titleDebounceRef = useRef(null);
 
-  const da = language !== 'en';
+  // UI language (from i18n) vs output language (language state)
+  const da = i18n.language === 'da';
+
+  // STEP_STATES uses t() so must live inside the component
+  const STEP_STATES = {
+    input:      [{ label: t('steps.input'), state: 'active', n: 1 }, { label: t('steps.check'), state: 'default', n: 2 }, { label: t('steps.generate'), state: 'default', n: 3 }, { label: t('steps.download'), state: 'default', n: 4 }],
+    checklist:  [{ label: t('steps.input'), state: 'done' },         { label: t('steps.check'), state: 'active', n: 2 }, { label: t('steps.generate'), state: 'default', n: 3 }, { label: t('steps.download'), state: 'default', n: 4 }],
+    generating: [{ label: t('steps.input'), state: 'done' },         { label: t('steps.check'), state: 'done' },         { label: t('steps.generate'), state: 'active', n: 3 }, { label: t('steps.download'), state: 'default', n: 4 }],
+    results:    [{ label: t('steps.input'), state: 'done' },         { label: t('steps.check'), state: 'done' },         { label: t('steps.generate'), state: 'done' },         { label: t('steps.download'), state: 'active', n: 4 }],
+    finalize:   [{ label: t('steps.input'), state: 'done' },         { label: t('steps.check'), state: 'done' },         { label: t('steps.generate'), state: 'done' },         { label: t('steps.download'), state: 'active', n: 4 }],
+    refused:    [{ label: t('steps.input'), state: 'active', n: 1 }, { label: t('steps.check'), state: 'default', n: 2 }, { label: t('steps.generate'), state: 'default', n: 3 }, { label: t('steps.download'), state: 'default', n: 4 }],
+  };
 
   const { challengeMap, loadingIndices, dismiss: dismissChallenge, markApproved } = useBulletChallenges({
     projectId: project.id,
@@ -518,6 +546,16 @@ export function Tier1Page({ project }) {
     }, 5000);
     return () => clearInterval(id);
   }, [storageKey, jobTitle, bullets, language, location, startDate, employmentType, workMode]);
+
+  // Fix 4: debounced project name sync when jobTitle changes
+  useEffect(() => {
+    if (!jobTitle.trim()) return;
+    clearTimeout(titleDebounceRef.current);
+    titleDebounceRef.current = setTimeout(() => {
+      api.patch(`/projects/${project.id}`, { name: jobTitle.trim() }).catch(() => {});
+    }, 2000);
+    return () => clearTimeout(titleDebounceRef.current);
+  }, [jobTitle, project.id]);
 
   // Restore server-side outputs
   useEffect(() => {
@@ -603,14 +641,12 @@ export function Tier1Page({ project }) {
     }
   }
 
-  // Select a variant (shows selected state + confirm bar)
   function handleSelectVariant(variant) {
     setSelectedVariant(variant);
     const content = variant === 'A' ? variantA : variantB;
     setFinalContent(content);
   }
 
-  // Confirm selected variant → go to finalize/edit
   function confirmVariant() {
     if (!selectedVariant || selectedVariant === 'mix') return;
     setStep('finalize');
@@ -621,14 +657,12 @@ export function Tier1Page({ project }) {
     }).catch(() => {});
   }
 
-  // Start mix
   function startMix() {
     setSelectedVariant('mix');
     setFinalContent('');
     setStep('finalize');
   }
 
-  // Download
   async function handleDownload() {
     if (!finalContent.trim()) return;
     setDownloading(true);
@@ -656,11 +690,13 @@ export function Tier1Page({ project }) {
     }
   }
 
-  // ── Helper: title bias violations ──
   const titleViolations = jobTitle.trim() ? checkBulletBias(jobTitle, language) : [];
   const wordCountFinal = finalContent.trim().split(/\s+/).filter(Boolean).length;
   const wordCountA = variantA.trim().split(/\s+/).filter(Boolean).length;
   const wordCountB = variantB.trim().split(/\s+/).filter(Boolean).length;
+
+  // Output language label (shown in review/finalize, tied to the posting's language)
+  const outputLangLabel = language === 'da' ? t('tier1.languageDa') : t('tier1.languageEn');
 
   // ═══════════════════════════════════════════════════════════
   // RENDER — scope wrapper changes per step
@@ -676,6 +712,7 @@ export function Tier1Page({ project }) {
             jobTitle={jobTitle}
             bullets={bullets.filter((b) => b.trim())}
             location={location}
+            workMode={workMode}
             language={language}
             projectId={project.id}
             onBack={() => setStep('input')}
@@ -697,12 +734,8 @@ export function Tier1Page({ project }) {
           </div>
           <div className="generating-screen">
             <div className="spinner" />
-            <h2>{da ? 'Genererer 2 varianter…' : 'Generating 2 variants…'}</h2>
-            <p>
-              {da
-                ? 'Kører bias-tjek · Kalder Claude AI · Tager typisk 10–20 sekunder'
-                : 'Running bias checks · Calling Claude AI · Usually 10–20 seconds'}
-            </p>
+            <h2>{t('tier1.generating')}</h2>
+            <p>{t('tier1.generatingSub')}</p>
           </div>
         </main>
       </div>
@@ -717,17 +750,11 @@ export function Tier1Page({ project }) {
         <main>
           <div className="refused-screen">
             <span className="refused-icon">⚠</span>
-            <h2>{da ? 'Indhold kan ikke genereres' : 'Content cannot be generated'}</h2>
-            <p>
-              {da
-                ? 'Dette indhold kan ikke genereres, da det strider mod vores retningslinjer.'
-                : 'This content cannot be generated as it violates our guidelines.'}
-            </p>
-            <p style={{ fontSize: 14, color: 'var(--ink-3)' }}>
-              {da ? 'Prøv at omformulere din jobtitel og punkter.' : 'Try rephrasing your job title and bullets.'}
-            </p>
+            <h2>{t('tier1.refusedTitle')}</h2>
+            <p>{t('tier1.refusedBody')}</p>
+            <p style={{ fontSize: 14, color: 'var(--ink-3)' }}>{t('tier1.refusedHint')}</p>
             <button className="btn btn-secondary" onClick={() => setStep('input')}>
-              ← {da ? 'Rediger input' : 'Edit inputs'}
+              ← {t('tier1.editInputs')}
             </button>
           </div>
         </main>
@@ -747,19 +774,17 @@ export function Tier1Page({ project }) {
           </div>
 
           <section className="review-head">
-            <div className="eyebrow">
-              {da ? 'Trin 4 af 4 · Gennemse' : 'Step 4 of 4 · Review'}
-            </div>
+            <div className="eyebrow">{t('tier1.stepReview')}</div>
             <h1>{jobTitle}</h1>
             <div className="sub">
-              <span className="lang">{da ? 'Dansk' : 'English'}</span>
+              <span className="lang">{outputLangLabel}</span>
               {' · '}
-              {da ? '2 varianter genereret' : '2 variants generated'}
+              {t('tier1.variantsGenerated')}
             </div>
             <div className="back-link">
               <button type="button" className="link-back" onClick={() => setStep('checklist')}>
                 <span className="arrow">←</span>
-                {da ? 'Rediger input' : 'Edit inputs'}
+                {t('tier1.editInputs')}
               </button>
             </div>
           </section>
@@ -770,10 +795,8 @@ export function Tier1Page({ project }) {
             {/* Variant A */}
             <div className={`variant${selectedVariant === 'A' ? ' selected' : ''}`}>
               <div className="v-head">
-                <div className="v-name">
-                  <h2>Variant A</h2>
-                </div>
-                <span className="wordcount">{wordCountA} {da ? 'ord' : 'words'}</span>
+                <div className="v-name"><h2>{t('tier1.variantA')}</h2></div>
+                <span className="wordcount">{wordCountA} {t('tier1.words')}</span>
               </div>
               <div className="v-body">
                 <JobPostingPreview content={variantA} />
@@ -784,18 +807,18 @@ export function Tier1Page({ project }) {
                   className="btn btn-primary"
                   onClick={() => handleSelectVariant('A')}
                 >
-                  {da ? 'Vælg Variant A' : 'Select Variant A'}
+                  {t('tier1.selectA')}
                 </button>
                 <span className="selected-flag">
                   <span className="ok">✓</span>
-                  {da ? 'Variant A valgt' : 'Variant A selected'}
+                  {t('tier1.selectedA')}
                 </span>
                 <button
                   type="button"
                   className="btn btn-ghost"
                   onClick={() => { handleSelectVariant('A'); setStep('finalize'); }}
                 >
-                  {da ? 'Rediger' : 'Edit'}
+                  {t('tier1.editBtn')}
                 </button>
               </div>
             </div>
@@ -803,10 +826,8 @@ export function Tier1Page({ project }) {
             {/* Variant B */}
             <div className={`variant${selectedVariant === 'B' ? ' selected' : ''}`}>
               <div className="v-head">
-                <div className="v-name">
-                  <h2>Variant B</h2>
-                </div>
-                <span className="wordcount">{wordCountB} {da ? 'ord' : 'words'}</span>
+                <div className="v-name"><h2>{t('tier1.variantB')}</h2></div>
+                <span className="wordcount">{wordCountB} {t('tier1.words')}</span>
               </div>
               <div className="v-body">
                 <JobPostingPreview content={variantB} />
@@ -817,18 +838,18 @@ export function Tier1Page({ project }) {
                   className="btn btn-primary"
                   onClick={() => handleSelectVariant('B')}
                 >
-                  {da ? 'Vælg Variant B' : 'Select Variant B'}
+                  {t('tier1.selectB')}
                 </button>
                 <span className="selected-flag">
                   <span className="ok">✓</span>
-                  {da ? 'Variant B valgt' : 'Variant B selected'}
+                  {t('tier1.selectedB')}
                 </span>
                 <button
                   type="button"
                   className="btn btn-ghost"
                   onClick={() => { handleSelectVariant('B'); setStep('finalize'); }}
                 >
-                  {da ? 'Rediger' : 'Edit'}
+                  {t('tier1.editBtn')}
                 </button>
               </div>
             </div>
@@ -836,14 +857,10 @@ export function Tier1Page({ project }) {
 
           <div className="mix-cta">
             <button type="button" className="btn btn-secondary btn-lg" onClick={startMix}>
-              {da ? 'Mix og tilpas' : 'Mix & customise'}
+              {t('tier1.mixCta')}
               <span className="arrow">→</span>
             </button>
-            <span className="note">
-              {da
-                ? 'Vælg de bedste afsnit fra begge varianter og sæt dem sammen'
-                : 'Pick the best sections from both variants and combine them'}
-            </span>
+            <span className="note">{t('tier1.mixNote')}</span>
           </div>
 
           {/* Previous variants history */}
@@ -855,7 +872,7 @@ export function Tier1Page({ project }) {
                 onClick={() => setHistoryOpen((v) => !v)}
               >
                 <h2>
-                  {da ? 'Tidligere genereringer' : 'Earlier generations'}
+                  {t('tier1.historyTitle')}
                   <span className="count">{histCount}</span>
                 </h2>
                 <span className="chev">▾</span>
@@ -869,7 +886,7 @@ export function Tier1Page({ project }) {
                         hour: '2-digit', minute: '2-digit',
                       })}
                     </span>
-                    <span className="h-meta">2 {da ? 'varianter' : 'variants'}</span>
+                    <span className="h-meta">2 {t('tier1.historyVariants')}</span>
                     <button
                       type="button"
                       className="h-link"
@@ -880,7 +897,7 @@ export function Tier1Page({ project }) {
                         setSelectedVariant(null);
                       }}
                     >
-                      {da ? 'Indlæs denne' : 'Load this'}
+                      {t('tier1.historyLoad')}
                     </button>
                   </div>
                 ))}
@@ -888,19 +905,19 @@ export function Tier1Page({ project }) {
             </div>
           )}
 
-          {/* Confirm bar (appears when a variant is selected) */}
+          {/* Confirm bar */}
           <div className={`confirm-bar${selectedVariant && selectedVariant !== 'mix' ? ' show' : ''}`}>
             <div className="confirm-inner">
               <span className="what">
                 <strong>Variant {selectedVariant}</strong>{' '}
-                {da ? 'er valgt' : 'selected'}
+                {t('tier1.variantSelected')}
               </span>
               <button
                 type="button"
                 className="btn btn-primary btn-lg"
                 onClick={confirmVariant}
               >
-                {da ? 'Gå videre til download' : 'Continue to download'}
+                {t('tier1.goToDownload')}
                 <span className="arrow">→</span>
               </button>
             </div>
@@ -924,9 +941,9 @@ export function Tier1Page({ project }) {
               <span className="arrow">←</span>
             </button>
             <div className="ttl">
-              {da ? 'Tilpas og mix' : 'Mix & customise'}
+              {t('tier1.mixTopbarTitle')}
               <span className="sub">
-                {jobTitle} · {da ? 'Dansk' : 'English'}
+                {jobTitle} · {outputLangLabel}
               </span>
             </div>
           </div>
@@ -943,9 +960,9 @@ export function Tier1Page({ project }) {
 
         <footer className="mix-foot">
           <div className="status">
-            <strong>{da ? 'Dit opslag' : 'Your posting'}</strong>
+            <strong>{t('tier1.wsTitle')}</strong>
             {' · '}
-            {wordCountFinal} {da ? 'ord' : 'words'}
+            {wordCountFinal} {t('tier1.words')}
           </div>
           <div className="actions">
             {error && <span className="error-text" style={{ marginRight: 12 }}>{error}</span>}
@@ -954,7 +971,7 @@ export function Tier1Page({ project }) {
               className="btn btn-secondary"
               onClick={() => setStep('results')}
             >
-              {da ? 'Annullér' : 'Cancel'}
+              {t('tier1.cancel')}
             </button>
             <button
               type="button"
@@ -962,9 +979,7 @@ export function Tier1Page({ project }) {
               onClick={handleDownload}
               disabled={downloading || !finalContent.trim()}
             >
-              {downloading
-                ? (da ? 'Forbereder…' : 'Preparing…')
-                : (da ? 'Download .docx' : 'Download .docx')}
+              {downloading ? t('tier1.preparing') : t('tier1.downloadDocx')}
               {!downloading && <span className="arrow">→</span>}
             </button>
           </div>
@@ -984,30 +999,24 @@ export function Tier1Page({ project }) {
           </div>
 
           <section className="review-head" style={{ paddingBottom: 'var(--s-5)' }}>
-            <div className="eyebrow">
-              {da ? 'Download' : 'Download'}
-            </div>
+            <div className="eyebrow">{t('tier1.downloadEyebrow')}</div>
             <h1>{jobTitle}</h1>
             <div className="sub">
-              Variant {selectedVariant} · {da ? 'Dansk' : 'English'}
+              {t('tier1.variantA').replace('A', selectedVariant)} · {outputLangLabel}
             </div>
             <div className="back-link">
               <button type="button" className="link-back" onClick={() => setStep('results')}>
                 <span className="arrow">←</span>
-                {da ? 'Varianter' : 'Variants'}
+                {t('tier1.backToVariants')}
               </button>
             </div>
           </section>
 
           <div className="edit-section">
             <div className="field">
-              <label className="field-label">
-                {da ? 'Rediger inden download' : 'Edit before download'}
-              </label>
+              <label className="field-label">{t('tier1.editBeforeDownload')}</label>
               <div className="hint" style={{ marginBottom: 'var(--s-3)', fontSize: 13, color: 'var(--ink-3)' }}>
-                {da
-                  ? `${wordCountFinal} ord · Klik og rediger direkte i teksten`
-                  : `${wordCountFinal} words · Click to edit directly`}
+                {wordCountFinal} {t('tier1.words')} · {t('tier1.editClickHint')}
               </div>
               <textarea
                 className="textarea"
@@ -1023,9 +1032,7 @@ export function Tier1Page({ project }) {
           <div className="actionbar">
             <div className="actionbar-inner">
               <div className="meta">
-                <span>
-                  {da ? 'Gemmes som' : 'Saved as'} .docx
-                </span>
+                <span>{t('tier1.savedAs')} .docx</span>
               </div>
               <button
                 type="button"
@@ -1033,9 +1040,7 @@ export function Tier1Page({ project }) {
                 onClick={handleDownload}
                 disabled={downloading || !finalContent.trim()}
               >
-                {downloading
-                  ? (da ? 'Forbereder…' : 'Preparing…')
-                  : (da ? 'Download som .docx' : 'Download as .docx')}
+                {downloading ? t('tier1.preparing') : t('tier1.downloadBtn')}
                 {!downloading && <span className="arrow">→</span>}
               </button>
             </div>
@@ -1060,7 +1065,7 @@ export function Tier1Page({ project }) {
               onClick={() => navigate('/dashboard')}
             >
               <span className="arrow">←</span>
-              {da ? 'Projekter' : 'Projects'}
+              {t('nav.projects')}
             </button>
             <div className="hide-mobile">
               <Steps steps={STEP_STATES.input} />
@@ -1069,34 +1074,28 @@ export function Tier1Page({ project }) {
 
           {/* Intro */}
           <section className="intro">
-            <div className="eyebrow">
-              {da ? 'Nyt jobopslag · Tier 1' : 'New job posting · Tier 1'}
-            </div>
-            <h1>{da ? 'Fortæl om rollen' : 'Tell us about the role'}</h1>
-            <p>
-              {da
-                ? 'Skriv jobtitlen og 5–10 punkter om, hvad jobbet faktisk indebærer. Vi udfordrer dig undervejs, hvor forskningen siger noget andet.'
-                : 'Write the job title and 5–10 bullets about what the role actually involves. We challenge you where the research says otherwise.'}
-            </p>
+            <div className="eyebrow">{t('tier1.eyebrow')}</div>
+            <h1>{t('tier1.intro')}</h1>
+            <p>{t('tier1.introSub')}</p>
           </section>
 
-          {/* Language toggle */}
+          {/* Output language toggle */}
           <div className="outlang">
-            <span className="lbl">{da ? 'Opslaget skrives på' : 'Posting language'}</span>
+            <span className="lbl">{t('tier1.outputLang')}</span>
             <div className="seg">
               <button
                 type="button"
                 className={language === 'da' ? 'on' : ''}
                 onClick={() => setLanguage('da')}
               >
-                🇩🇰 Dansk
+                🇩🇰 {t('tier1.languageDa')}
               </button>
               <button
                 type="button"
                 className={language === 'en' ? 'on' : ''}
                 onClick={() => setLanguage('en')}
               >
-                🇬🇧 English
+                🇬🇧 {t('tier1.languageEn')}
               </button>
             </div>
           </div>
@@ -1105,17 +1104,15 @@ export function Tier1Page({ project }) {
             {/* Job title */}
             <section className="block">
               <div className="block-head">
-                <h2>{da ? 'Jobtitel' : 'Job title'}</h2>
-                <div className="sub">
-                  {da ? 'Den titel kandidaterne ser øverst i opslaget.' : 'The title candidates see at the top.'}
-                </div>
+                <h2>{t('tier1.jobTitleLabel')}</h2>
+                <div className="sub">{t('tier1.jobTitleSub')}</div>
               </div>
               <input
                 type="text"
                 className="input input-lg"
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
-                placeholder={da ? 'fx Senior HR-konsulent' : 'e.g. Senior Software Engineer'}
+                placeholder={t('tier1.jobTitlePlaceholder')}
                 maxLength={200}
                 required
               />
@@ -1125,7 +1122,7 @@ export function Tier1Page({ project }) {
                     <div key={i} className={`inline-bias inline-bias-${v.severity}`}>
                       <span className="inline-bias-label">{v.label}:</span>
                       <span className="inline-bias-matches">
-                        {v.matchedTexts.map((t) => `"${t}"`).join(', ')}
+                        {v.matchedTexts.map((m) => `"${m}"`).join(', ')}
                       </span>
                       <span className="inline-bias-tip">{v.suggestion}</span>
                     </div>
@@ -1138,16 +1135,12 @@ export function Tier1Page({ project }) {
             <section className="block">
               <div className="block-head">
                 <h2>
-                  {da ? 'Om rollen' : 'About the role'}
+                  {t('tier1.bulletsLabel')}
                   <span className="bullet-count">
                     {bullets.filter((b) => b.trim()).length} / 10
                   </span>
                 </h2>
-                <div className="sub">
-                  {da
-                    ? 'Konkrete ansvarsområder, krav og rammer. Ét punkt pr. linje.'
-                    : 'Concrete responsibilities, requirements and context. One bullet per line.'}
-                </div>
+                <div className="sub">{t('tier1.bulletsSub')}</div>
               </div>
               <BulletInput
                 bullets={bullets}
@@ -1163,42 +1156,43 @@ export function Tier1Page({ project }) {
             {/* Details */}
             <section className="block">
               <div className="block-head">
-                <h2>{da ? 'Detaljer' : 'Details'} <span className="optional">{da ? 'valgfrit' : 'optional'}</span></h2>
-                <div className="sub">
-                  {da ? 'Udfyld det, du kender. Resten kan tilføjes senere.' : 'Fill in what you know. The rest can be added later.'}
-                </div>
+                <h2>
+                  {t('tier1.detailsLabel')}
+                  <span className="optional">{t('tier1.optional')}</span>
+                </h2>
+                <div className="sub">{t('tier1.detailsSub')}</div>
               </div>
               <div className="detail-grid">
                 <div className="field">
-                  <label>{da ? 'Lokation' : 'Location'}</label>
+                  <label>{t('tier1.locationLabel')}</label>
                   <input
                     className="input"
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    placeholder={da ? 'fx København Ø' : 'e.g. Copenhagen / Remote'}
+                    placeholder={t('tier1.locationPlaceholder')}
                     maxLength={100}
                   />
                 </div>
                 <div className="field">
-                  <label>{da ? 'Startdato' : 'Start date'}</label>
+                  <label>{t('tier1.startDateLabel')}</label>
                   <input
                     className="input"
                     type="text"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    placeholder={da ? 'fx 1. august 2026' : 'e.g. ASAP / 1 Aug 2026'}
+                    placeholder={t('tier1.startDatePlaceholder')}
                     maxLength={50}
                   />
                 </div>
                 <div className="field">
-                  <label>{da ? 'Ansættelsestype' : 'Employment type'}</label>
+                  <label>{t('tier1.employmentTypeLabel')}</label>
                   <select
                     className="select"
                     value={employmentType}
                     onChange={(e) => setEmploymentType(e.target.value)}
                   >
-                    <option value="">{da ? 'Vælg type' : 'Select type'}</option>
+                    <option value="">{t('tier1.selectType')}</option>
                     <option value="Fuldtid">{da ? 'Fuldtid' : 'Full-time'}</option>
                     <option value="Deltid">{da ? 'Deltid' : 'Part-time'}</option>
                     <option value="Tidsbegrænset">{da ? 'Tidsbegrænset' : 'Fixed-term'}</option>
@@ -1207,13 +1201,13 @@ export function Tier1Page({ project }) {
                   </select>
                 </div>
                 <div className="field">
-                  <label>{da ? 'Arbejdsform' : 'Work mode'}</label>
+                  <label>{t('tier1.workModeLabel')}</label>
                   <select
                     className="select"
                     value={workMode}
                     onChange={(e) => setWorkMode(e.target.value)}
                   >
-                    <option value="">{da ? 'Vælg arbejdsform' : 'Select work mode'}</option>
+                    <option value="">{t('tier1.selectWorkMode')}</option>
                     <option value="På kontoret">{da ? 'På kontoret' : 'On-site'}</option>
                     <option value="Hybrid">Hybrid</option>
                     <option value="Fuldt remote">{da ? 'Fuldt remote' : 'Fully remote'}</option>
@@ -1226,14 +1220,10 @@ export function Tier1Page({ project }) {
             <section className="block">
               <div className="block-head">
                 <h2>
-                  {da ? 'Virksomhedsskabelon' : 'Company template'}
-                  <span className="optional">{da ? 'valgfrit' : 'optional'}</span>
+                  {t('tier1.templateLabel')}
+                  <span className="optional">{t('tier1.optional')}</span>
                 </h2>
-                <div className="sub">
-                  {da
-                    ? 'Upload en .docx, så opslaget følger jeres tone og opsætning.'
-                    : 'Upload a .docx so the posting matches your tone and layout.'}
-                </div>
+                <div className="sub">{t('tier1.templateHint')}</div>
               </div>
               <label className={`upload${templateFile ? ' has-file' : ''}`}>
                 <span className="icon">{templateFile ? '✓' : '↑'}</span>
@@ -1249,17 +1239,15 @@ export function Tier1Page({ project }) {
                           style={{ fontSize: 12 }}
                           onClick={(e) => { e.preventDefault(); setTemplateFile(null); }}
                         >
-                          {da ? 'Fjern' : 'Remove'}
+                          {t('tier1.templateRemove')}
                         </button>
                       </span>
                     </>
                   ) : (
                     <>
-                      <span className="up-title">
-                        {da ? 'Træk en fil hertil, eller vælg' : 'Drag a file here, or browse'}
-                      </span>
+                      <span className="up-title">{t('tier1.templateDrop')}</span>
                       <br />
-                      <span className="up-sub">.docx · {da ? 'maks 5 MB' : 'max 5 MB'}</span>
+                      <span className="up-sub">{t('tier1.templateSize')}</span>
                     </>
                   )}
                 </span>
@@ -1280,12 +1268,12 @@ export function Tier1Page({ project }) {
                   {loadingIndices.size > 0 ? (
                     <>
                       <span className="bullet-loading-dot" style={{ marginRight: 8 }} aria-hidden="true" />
-                      {da ? 'Tjekker mod forskning…' : 'Checking against research…'}
+                      {t('tier1.checkingResearch')}
                     </>
                   ) : openChallenges > 0 ? (
-                    <><strong>{openChallenges}</strong> {da ? `forslag venter på dit svar` : `suggestion${openChallenges !== 1 ? 's' : ''} awaiting your response`}</>
+                    <><strong>{openChallenges}</strong> {t('tier1.suggestionsWaiting', { count: openChallenges })}</>
                   ) : (
-                    <><strong>{da ? 'Klar til at generere' : 'Ready to generate'}</strong></>
+                    <><strong>{t('tier1.readyToGenerate')}</strong></>
                   )}
                 </div>
                 <button
@@ -1293,7 +1281,7 @@ export function Tier1Page({ project }) {
                   className="btn btn-primary btn-lg"
                   disabled={loadingIndices.size > 0}
                 >
-                  {da ? 'Generer jobopslag' : 'Generate job posting'}
+                  {t('tier1.generateBtn')}
                   <span className="arrow">→</span>
                 </button>
               </div>
