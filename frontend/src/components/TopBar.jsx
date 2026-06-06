@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 export default function TopBar({ active }) {
   const { user, logout } = useAuth();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const navigate = useNavigate();
 
   const initials = user?.email ? user.email[0].toUpperCase() : '?';
@@ -26,7 +26,7 @@ export default function TopBar({ active }) {
           to="/dashboard"
           className={active === 'projects' ? 'active' : ''}
         >
-          Projekter
+          {t('nav.projects')}
         </Link>
 
         <span className="divider" />

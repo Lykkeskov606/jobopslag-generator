@@ -1,65 +1,28 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { runCompletenessCheck } from '../lib/completenessRules.js';
 import { useBulletChallenges } from '../hooks/useBulletChallenges.js';
 import { BulletChallengeCard } from './BulletChallengeCard.jsx';
 import Steps from './Steps.jsx';
-
-const STRINGS = {
-  da: {
-    title: 'Har du husket?',
-    subtitle_one: 'Ét element mangler typisk i opslag som dette — udfyld eller fortsæt alligevel.',
-    subtitle_other: (n) => `${n} elementer mangler typisk i opslag som dette — udfyld eller fortsæt alligevel.`,
-    all_clear: 'Alt ser godt ud',
-    all_clear_sub: 'Ingen manglende elementer fundet i dit input.',
-    skip_label: 'Ikke relevant for denne rolle',
-    back: 'Rediger input',
-    generate_with: (n) => `Generer med ${n} note${n !== 1 ? 'r' : ''} →`,
-    generate_anyway: 'Generer alligevel →',
-    generate_ready: 'Generer jobopslag →',
-    generate_checking: 'Tjekker noter…',
-    addressed: (n, total) => `${n} af ${total} udfyldt`,
-  },
-  en: {
-    title: 'Did you remember?',
-    subtitle_one: 'One element is often missing from job postings — add details or generate anyway.',
-    subtitle_other: (n) => `${n} elements are often missing from job postings — add details or generate anyway.`,
-    all_clear: 'All checks passed',
-    all_clear_sub: 'No missing elements found in your input.',
-    skip_label: 'Not relevant for this role',
-    back: 'Edit input',
-    generate_with: (n) => `Generate with ${n} note${n !== 1 ? 's' : ''} →`,
-    generate_anyway: 'Generate anyway →',
-    generate_ready: 'Generate job posting →',
-    generate_checking: 'Checking notes…',
-    addressed: (n, total) => `${n} of ${total} addressed`,
-  },
-};
-
-const STEPS = [
-  { label: 'Input', state: 'done' },
-  { label: 'Tjek', state: 'active', n: 2 },
-  { label: 'Generer', state: 'default', n: 3 },
-  { label: 'Download', state: 'default', n: 4 },
-];
 
 /**
  * Completeness micro-step between form input and AI generation.
  * Analyses bullets for missing elements and shows per-note challenges.
  *
  * Props:
- *   jobTitle, bullets, location  — current form values
- *   language                     — 'da' | 'en'
- *   projectId                    — for the challenge API call
- *   onBack()                     — go back to edit the input form
- *   onProceed(extraBullets)      — proceed to generation with optional extra context
+ *   jobTitle, bullets, location, workMode  — current form values
+ *   language                               — 'da' | 'en' (output language)
+ *   projectId                              — for the challenge API call
+ *   onBack()                               — go back to edit the input form
+ *   onProceed(extraBullets)               — proceed with optional extra context
  */
 export function InputCompletenessCheck({
-  jobTitle, bullets, location, language, projectId,
+  jobTitle, bullets, location, workMode = '', language, projectId,
   onBack, onProceed,
 }) {
+  const { t, i18n } = useTranslation();
   const lang = language === 'en' ? 'en' : 'da';
-  const t = STRINGS[lang];
-  const missing = runCompletenessCheck({ jobTitle, bullets, location, language });
+  const missing = runCompletenessCheck({ jobTitle, bullets, location, workMode, language });
 
   const [notes, setNotes]     = useState({});
   const [skipped, setSkipped] = useState(new Set());
@@ -122,35 +85,51 @@ export function InputCompletenessCheck({
     ? Math.round((addressedCount / missing.length) * 100)
     : 100;
 
+  const steps = [
+    { label: t('steps.input'), state: 'done' },
+    { label: t('steps.check'), state: 'active', n: 2 },
+    { label: t('steps.generate'), state: 'default', n: 3 },
+    { label: t('steps.download'), state: 'default', n: 4 },
+  ];
+
+  let generateLabel;
+  if (noteLoadingIndices.size > 0) {
+    generateLabel = t('completeness.checking');
+  } else if (missing.length === 0) {
+    generateLabel = t('completeness.generateReady');
+  } else if (addressedCount > 0) {
+    generateLabel = t('completeness.generateWith', { count: addressedCount });
+  } else {
+    generateLabel = t('completeness.generateAnyway');
+  }
+
   return (
     <div className="work">
       {/* Back + steps */}
       <div className="work-top">
         <button type="button" className="link-back" onClick={onBack}>
-          <span className="arrow">←</span> {t.back}
+          <span className="arrow">←</span> {t('completeness.back')}
         </button>
         <div className="hide-mobile">
-          <Steps steps={STEPS} />
+          <Steps steps={steps} />
         </div>
       </div>
 
       {/* Intro */}
       <section className="intro">
-        <div className="eyebrow">
-          {lang === 'da' ? 'Trin 2 af 4' : 'Step 2 of 4'}
-        </div>
+        <div className="eyebrow">{t('completeness.step')}</div>
         {missing.length === 0 ? (
           <>
-            <h1>{t.all_clear}</h1>
-            <p>{t.all_clear_sub}</p>
+            <h1>{t('completeness.allClear')}</h1>
+            <p>{t('completeness.allClearSub')}</p>
           </>
         ) : (
           <>
-            <h1>{t.title}</h1>
+            <h1>{i18n.language === 'da' ? 'Har du husket?' : 'Did you remember?'}</h1>
             <p>
               {missing.length === 1
-                ? t.subtitle_one
-                : t.subtitle_other(missing.length)}
+                ? t('completeness.subtitleSingle')
+                : t('completeness.subtitlePlural', { n: missing.length })}
             </p>
           </>
         )}
@@ -181,7 +160,7 @@ export function InputCompletenessCheck({
                 {isFilled && (
                   <div className="done-flag">
                     <span className="ok">✓</span>
-                    {lang === 'da' ? 'Udfyldt' : 'Filled in'}
+                    {t('completeness.filled')}
                   </div>
                 )}
 
@@ -219,7 +198,7 @@ export function InputCompletenessCheck({
                       onChange={() => toggleSkip(check.id)}
                     />
                     <span className="box" />
-                    {t.skip_label}
+                    {t('completeness.skipLabel')}
                   </label>
                 </div>
               </div>
@@ -238,7 +217,7 @@ export function InputCompletenessCheck({
                   <div className="fill" style={{ width: `${progressPct}%` }} />
                 </div>
                 <span className="label">
-                  <strong>{addressedCount} af {missing.length}</strong> udfyldt
+                  {t('completeness.progress', { done: addressedCount, total: missing.length })}
                 </span>
               </div>
             )}
@@ -249,11 +228,7 @@ export function InputCompletenessCheck({
             onClick={proceed}
             disabled={noteLoadingIndices.size > 0}
           >
-            {noteLoadingIndices.size > 0
-              ? t.generate_checking
-              : (missing.length > 0
-                  ? (addressedCount > 0 ? t.generate_with(addressedCount) : t.generate_anyway)
-                  : t.generate_ready)}
+            {generateLabel}
           </button>
         </div>
       </div>
