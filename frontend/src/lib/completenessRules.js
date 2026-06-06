@@ -61,12 +61,14 @@ export const COMPLETENESS_CHECKS = [
       en: 'e.g. hybrid (2 days remote), office in London',
     },
     detect: {
-      da: /\bremote\b|\bhybrid\b|\bhjemmekontor\b|\bfleksibel\b|\bon.site\b|\bhjemmefra\b/i,
-      en: /\bremote\b|\bhybrid\b|\bhome office\b|\bflexible work\b|\bon.site\b|\bwork from home\b/i,
+      // "fleksibel" removed — too broad (matches "fleksibel teamplayer" etc.)
+      // "on.site" fixed to on[- ]?site (unescaped dot matched any char)
+      da: /\bremote\b|\bhybrid\b|\bhjemmekontor\b|\bon[- ]?site\b|\bhjemmefra\b/i,
+      en: /\bremote\b|\bhybrid\b|\bhome[- ]?office\b|\bflexible work\b|\bon[- ]?site\b|\bwork from home\b/i,
     },
     detectInLocation: {
       da: /\bremote\b|\bhybrid\b|\bhjemmekontor\b/i,
-      en: /\bremote\b|\bhybrid\b|\bhome office\b/i,
+      en: /\bremote\b|\bhybrid\b|\bhome[- ]?office\b/i,
     },
   },
   {
