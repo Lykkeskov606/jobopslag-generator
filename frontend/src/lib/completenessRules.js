@@ -84,8 +84,10 @@ export const COMPLETENESS_CHECKS = [
       en: 'e.g. launched v2 of the product and reduced churn by 15% after 12 months',
     },
     detect: {
-      da: /\bsucces|\bkpi\b|\bmål\b|\bresultat|\blever(er)?\b|\bansvarlig for\b|\bopnå\b/i,
-      en: /\bsuccess\b|\bkpi\b|\bgoal\b|\btarget\b|\bdeliver\b|\bachieve\b|\bresponsible for\b|\bmeasure\b/i,
+      // Narrow pattern: only explicit mentions of success criteria or KPIs,
+      // not generic "goal" / "result" words that appear in almost every posting.
+      da: /\bsucceskriterier?\b|\bsuccess.kriterier?\b|\bkpi\b|\bmåles på\b|\bi de første\s+\d|\befter\s+\d+\s*(måned|år)\b/i,
+      en: /\bsuccess criteria\b|\bsuccess metrics?\b|\bkpi\b|\bmeasured (by|on)\b|\bin the first\s+\d|\bwithin\s+\d+\s*month/i,
     },
   },
 ];
@@ -101,15 +103,17 @@ export const COMPLETENESS_CHECKS = [
  * @param {string}   opts.language   - 'da' | 'en'
  * @returns {Array}  array of missing COMPLETENESS_CHECKS entries
  */
-export function runCompletenessCheck({ jobTitle = '', bullets = [], location = '', language = 'da' }) {
+export function runCompletenessCheck({ jobTitle = '', bullets = [], location = '', workMode = '', language = 'da' }) {
   const lang = language === 'en' ? 'en' : 'da';
   const fullText = [jobTitle, ...bullets].join(' ');
 
   return COMPLETENESS_CHECKS.filter((check) => {
-    // For remote_policy: also check the location field for remote/hybrid keywords
+    // For remote_policy: also check the location field and workMode dropdown
     if (check.detectInLocation) {
       const locPattern = check.detectInLocation[lang];
       if (locPattern && locPattern.test(location)) return false;
+      // If user selected a workMode, remote_policy is addressed
+      if (workMode && workMode.trim()) return false;
     }
 
     const pattern = check.detect[lang];
