@@ -1,0 +1,25 @@
+You are an experienced recruitment consultant. Generate 4 specific fit criteria based on the role and team information provided.
+
+JOB TITLE: {{job_title}}
+DEPARTMENT / TEAM: {{department}}
+TEAM COMPOSITION: {{team_composition}}
+
+Return ONLY valid JSON — no explanation, no markdown formatting, just the JSON object:
+{
+  "job_fit": "...",
+  "team_fit": "...",
+  "leader_fit": "...",
+  "culture_fit": "..."
+}
+
+RULES FOR EACH CRITERION:
+- 2–4 concrete sentences, max 80 words per criterion
+- Use specific knowledge from the job title, department, and team composition above
+- No generic clichés: not "good communicator", "team player", "results-driven", "self-starter"
+- Ground criteria in concrete behaviours and actions — what the person does, not who they are
+- No hallucination: only write what is evident from the input
+
+job_fit: what the person needs to master professionally to perform the job
+team_fit: what is required to collaborate effectively with this specific team
+leader_fit: what is required in the relationship with the direct manager and leadership structure
+culture_fit: the behavioural and work patterns that fit this environment

@@ -372,4 +372,69 @@ async function generateJobPosting({ jobTitle, bullets, language, templateContent
   return extractVariants(text);
 }
 
-module.exports = { generateJobPosting };
+// ── Tier 2: fit criteria ──────────────────────────────────────────────────────
+
+async function generateFitCriteria({ jobTitle, department, teamComposition, language, projectId, userId }) {
+  const promptFile = `fit-criteria-${language}.txt`;
+  const template = readPrompt(promptFile);
+  const prompt = fillTemplate(template, {
+    job_title: jobTitle,
+    department: department || (language === 'da' ? '(ikke angivet)' : '(not specified)'),
+    team_composition: teamComposition || (language === 'da' ? '(ikke angivet)' : '(not specified)'),
+  });
+
+  const text = await callClaude(prompt, promptFile, projectId, userId, 3);
+
+  // Extract JSON from response — strip any markdown fences if present
+  const cleaned = text.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Invalid fit criteria response');
+
+  const parsed = JSON.parse(jsonMatch[0]);
+  return {
+    job_fit: parsed.job_fit || '',
+    team_fit: parsed.team_fit || '',
+    leader_fit: parsed.leader_fit || '',
+    culture_fit: parsed.culture_fit || '',
+  };
+}
+
+// ── Tier 2: job analysis answer challenge ─────────────────────────────────────
+
+const JOB_ANALYSIS_QUESTIONS = {
+  da: {
+    best:   'Tænk på den bedste person du nogensinde har set i en tilsvarende rolle. Hvad gjorde de konkret i hverdagen?',
+    worst:  'Hvad gjorde den person der fejlede i denne type rolle konkret forkert?',
+    hidden: 'Hvad er det krav der ikke er skrevet i opslaget, men som afgør om nogen lykkes i rollen?',
+  },
+  en: {
+    best:   'Think of the best person you\'ve seen in a similar role. What did they specifically do day-to-day?',
+    worst:  'What did the person who failed in this type of role specifically do wrong?',
+    hidden: 'What is the requirement that isn\'t written in the job posting, but determines whether someone succeeds in the role?',
+  },
+};
+
+async function challengeJobAnalysisAnswer({ questionType, answer, language, projectId, userId }) {
+  const promptFile = `job-analysis-challenge-${language}.txt`;
+  const template = readPrompt(promptFile);
+  const lang = language === 'en' ? 'en' : 'da';
+  const question = JOB_ANALYSIS_QUESTIONS[lang][questionType] || '';
+
+  const prompt = fillTemplate(template, {
+    question_type: questionType,
+    question,
+    answer,
+  });
+
+  const text = await callClaude(prompt, promptFile, projectId, userId, 5);
+
+  const cleaned = text.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { challenge: null };
+
+  const parsed = JSON.parse(jsonMatch[0]);
+  if (parsed.is_concrete) return { challenge: null };
+  return { challenge: parsed.challenge || null, probe: parsed.probe || null };
+}
+
+module.exports = { generateJobPosting, generateFitCriteria, challengeJobAnalysisAnswer };

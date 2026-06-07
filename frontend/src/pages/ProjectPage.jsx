@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { Tier1Page } from './Tier1Page';
+import { Tier2Page } from './Tier2Page';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
 export function ProjectPage() {
@@ -45,10 +46,7 @@ export function ProjectPage() {
       {project.tier === 1 ? (
         <Tier1Page project={project} />
       ) : (
-        <div style={{ padding: '2rem' }}>
-          <button className="link-btn" onClick={() => navigate('/dashboard')}>← Dashboard</button>
-          <h2 style={{ marginTop: '1rem' }}>Full Recruitment Project — coming soon</h2>
-        </div>
+        <Tier2Page project={project} />
       )}
     </ErrorBoundary>
   );
