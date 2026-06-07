@@ -351,7 +351,7 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
       });
       setState((s) => ({
         ...s,
-        fitCriteria: {
+        fitSuggestions: {
           job_fit: data.job_fit || '',
           team_fit: data.team_fit || '',
           leader_fit: data.leader_fit || '',
@@ -366,6 +366,7 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
     }
   }
 
+  // Auto-generate once on first entry
   useEffect(() => {
     if (!state.fitGenerated && state.jobTitle.trim()) generate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -401,32 +402,78 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
       )}
 
       <section className="block">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {FIT_FIELDS.map((field) => (
-            <div key={field} className="ccard">
-              <h3>{t(`tier2.${labelKey[field]}`)}</h3>
-              <p className="why" style={{ marginBottom: 12 }}>{t(`tier2.${descKey[field]}`)}</p>
-              <textarea
-                className="textarea"
-                rows={4}
-                value={state.fitCriteria?.[field] || ''}
-                onChange={(e) => setState((s) => ({
-                  ...s,
-                  fitCriteria: { ...(s.fitCriteria || {}), [field]: e.target.value },
-                }))}
-                placeholder={generating ? '…' : ''}
-                style={{ resize: 'vertical', minHeight: 80 }}
-                disabled={generating}
-              />
-            </div>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {FIT_FIELDS.map((field) => {
+            const suggestion = state.fitSuggestions?.[field] || '';
+            return (
+              <div key={field} className="ccard">
+                <h3>{t(`tier2.${labelKey[field]}`)}</h3>
+                <p className="why" style={{ marginBottom: 12 }}>{t(`tier2.${descKey[field]}`)}</p>
+
+                {/* AI suggestion card */}
+                {suggestion && (
+                  <div style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderLeft: '3px solid var(--accent)',
+                    borderRadius: 6,
+                    padding: '12px 16px',
+                    marginBottom: 12,
+                  }}>
+                    <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, marginBottom: 6 }}>
+                      {t('tier2.step3SuggestionLabel')}
+                    </div>
+                    <p style={{ fontSize: 14, margin: '0 0 12px', lineHeight: 1.65 }}>{suggestion}</p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ fontSize: 13, padding: '6px 14px' }}
+                        onClick={() => setState((s) => ({
+                          ...s,
+                          fitCriteria: { ...(s.fitCriteria || {}), [field]: suggestion },
+                          fitSuggestions: { ...(s.fitSuggestions || {}), [field]: '' },
+                        }))}
+                      >
+                        {t('tier2.step3UseProposal')}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        style={{ fontSize: 13, padding: '6px 14px' }}
+                        onClick={() => setState((s) => ({
+                          ...s,
+                          fitSuggestions: { ...(s.fitSuggestions || {}), [field]: '' },
+                        }))}
+                      >
+                        {t('tier2.step3IgnoreProposal')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <textarea
+                  className="textarea"
+                  rows={4}
+                  value={state.fitCriteria?.[field] || ''}
+                  onChange={(e) => setState((s) => ({
+                    ...s,
+                    fitCriteria: { ...(s.fitCriteria || {}), [field]: e.target.value },
+                  }))}
+                  placeholder={suggestion ? t('tier2.step3WithSuggestion') : t('tier2.step3NoSuggestion')}
+                  style={{ resize: 'vertical', minHeight: 80 }}
+                  disabled={generating}
+                />
+              </div>
+            );
+          })}
         </div>
       </section>
 
       {state.fitGenerated && !generating && (
         <div style={{ marginTop: 8 }}>
           <button className="btn btn-ghost" onClick={generate}>
-            {t('tier2.step3GenerateBtn')}
+            {t('tier2.step3Regenerate')}
           </button>
         </div>
       )}
@@ -447,9 +494,9 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
   );
 }
 
-// ─── Step 4: Krav (renamed to Kandidatprofil in Commit 2) ────────────────────
+// ─── Step 4: Kandidatprofil ───────────────────────────────────────────────────
 
-function Step4Requirements({ state, setState, onNext, onBack, t, project }) {
+function Step4CandidateProfile({ state, setState, onNext, onBack, t, project }) {
   const language = state.outputLanguage || 'da';
 
   const {
@@ -495,6 +542,19 @@ function Step4Requirements({ state, setState, onNext, onBack, t, project }) {
         <h1>{t('tier2.step4Title')}</h1>
         <p>{t('tier2.step4Sub')}</p>
       </section>
+
+      <div style={{
+        background: 'var(--accent-soft, #f0f4ff)',
+        border: '1px solid var(--accent-border, #c7d7fb)',
+        borderRadius: 8,
+        padding: '12px 16px',
+        fontSize: 14,
+        color: 'var(--ink-2)',
+        lineHeight: 1.65,
+        margin: '0 0 8px',
+      }}>
+        {t('tier2.step4InfoBox')}
+      </div>
 
       <section className="block">
         <div className="block-head">
@@ -696,6 +756,7 @@ export function Tier2Page({ project }) {
       outputLanguage: project.output_language || 'da',
       // Step 3
       fitCriteria: { job_fit: '', team_fit: '', leader_fit: '', culture_fit: '' },
+      fitSuggestions: null,
       fitGenerated: false,
       // Step 4
       requirements: [''],
@@ -839,7 +900,7 @@ export function Tier2Page({ project }) {
           <Step3FitCriteria {...stepProps} onNext={toStep4} onBack={() => setAppStep(2)} />
         )}
         {appStep === 4 && (
-          <Step4Requirements {...stepProps} onNext={toStep5} onBack={() => setAppStep(3)} />
+          <Step4CandidateProfile {...stepProps} onNext={toStep5} onBack={() => setAppStep(3)} />
         )}
         {appStep === 5 && (
           <Step5JobAnalysis {...stepProps} onNext={toComplete} onBack={() => setAppStep(4)} />
