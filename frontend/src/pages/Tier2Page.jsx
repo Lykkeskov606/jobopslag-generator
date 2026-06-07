@@ -62,13 +62,14 @@ function FitFieldBias({ text, language }) {
 function Step1Template({ state, setState, onNext, onSkip, t, da }) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const fileRef = useRef(null);
+  const [uploadError, setUploadError] = useState(null);
 
   async function handleFile(file) {
     if (!file) return;
     const allowed = file.name.toLowerCase().endsWith('.docx') || file.name.toLowerCase().endsWith('.pdf');
     if (!allowed) return;
     setUploading(true);
+    setUploadError(null);
     try {
       const form = new FormData();
       form.append('template', file);
@@ -76,8 +77,11 @@ function Step1Template({ state, setState, onNext, onSkip, t, da }) {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setState((s) => ({ ...s, templateText: data.templateText, templateFilename: data.filename, skipped: false }));
-    } catch {
-      // Non-fatal — user can retry
+    } catch (err) {
+      const msg = err.response?.data?.message
+        || (da ? 'Kunne ikke læse filen. Prøv en anden fil eller spring over.' : 'Could not read file. Try another or skip.');
+      setUploadError(msg);
+      setState((s) => ({ ...s, templateText: null, templateFilename: null, skipped: false }));
     } finally {
       setUploading(false);
     }
@@ -90,7 +94,7 @@ function Step1Template({ state, setState, onNext, onSkip, t, da }) {
   }
 
   return (
-    <div className="work s-input">
+    <div className="work">
       <div className="work-top">
         <button className="link-back" onClick={() => window.history.back()}>
           <span className="arrow">←</span> {da ? 'Dashboard' : 'Dashboard'}
@@ -106,42 +110,69 @@ function Step1Template({ state, setState, onNext, onSkip, t, da }) {
         <p>{t('tier2.step1Sub')}</p>
       </section>
 
-      {state.templateFilename ? (
-        <div className="upload-success" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 24 }}>
-          <span style={{ fontSize: 22 }}>📄</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>{t('tier2.step1Uploaded')}</div>
-            <div style={{ color: 'var(--ink-3)', fontSize: 13 }}>{state.templateFilename}</div>
-          </div>
-          <button
-            className="btn btn-ghost"
-            style={{ fontSize: 13 }}
-            onClick={() => setState((s) => ({ ...s, templateText: null, templateFilename: null, skipped: false }))}
-          >
-            {t('tier2.step1Remove')}
-          </button>
+      <section className="block">
+        <div className="block-head">
+          <h2>
+            {t('tier2.step1Drop')}
+            <span className="optional">{t('tier1.optional')}</span>
+          </h2>
+          <div className="sub">{t('tier2.step1Size')}</div>
         </div>
-      ) : (
-        <div
-          className={`upload-zone${dragging ? ' drag-over' : ''}`}
+
+        {uploadError && (
+          <p className="error-text" style={{ marginBottom: 12 }}>{uploadError}</p>
+        )}
+
+        <label
+          className={`upload${state.templateFilename ? ' has-file' : ''}`}
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
-          onClick={() => fileRef.current?.click()}
-          style={{ border: '2px dashed var(--border)', borderRadius: 8, padding: '40px 24px', textAlign: 'center', cursor: 'pointer', background: dragging ? 'var(--surface)' : 'transparent', transition: 'background 0.15s', marginBottom: 24 }}
+          style={dragging ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)' } : undefined}
         >
-          <input ref={fileRef} type="file" accept=".docx,.pdf" style={{ display: 'none' }} onChange={(e) => handleFile(e.target.files[0])} />
+          <input
+            type="file"
+            accept=".docx,.pdf"
+            hidden
+            onChange={(e) => handleFile(e.target.files[0])}
+          />
           {uploading ? (
-            <div className="spinner" style={{ margin: '0 auto' }} />
+            <div className="spinner" style={{ width: 24, height: 24 }} />
+          ) : state.templateFilename ? (
+            <>
+              <span className="icon">✓</span>
+              <span>
+                <span className="up-title">{state.templateFilename}</span>
+                <br />
+                <span className="up-sub">
+                  <button
+                    type="button"
+                    className="link-btn"
+                    style={{ fontSize: 12 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setState((s) => ({ ...s, templateText: null, templateFilename: null, skipped: false }));
+                      setUploadError(null);
+                    }}
+                  >
+                    {t('tier2.step1Remove')}
+                  </button>
+                </span>
+              </span>
+            </>
           ) : (
             <>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>📎</div>
-              <div style={{ fontWeight: 500, marginBottom: 4 }}>{t('tier2.step1Drop')}</div>
-              <div style={{ color: 'var(--ink-3)', fontSize: 13 }}>{t('tier2.step1Size')}</div>
+              <span className="icon">↑</span>
+              <span>
+                <span className="up-title">{t('tier2.step1Drop')}</span>
+                <br />
+                <span className="up-sub">{t('tier2.step1Size')}</span>
+              </span>
             </>
           )}
-        </div>
-      )}
+        </label>
+      </section>
 
       <div className="actionbar">
         <div className="actionbar-inner">
@@ -175,7 +206,7 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
   const valid = state.jobTitle.trim().length > 0;
 
   return (
-    <div className="work s-input">
+    <div className="work">
       <div className="work-top">
         <button className="link-back" onClick={onBack}>
           <span className="arrow">←</span> {t('tier2.back')}
@@ -191,84 +222,91 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
         <p>{t('tier2.step2Sub')}</p>
       </section>
 
-      <div className="form-stack" style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 560 }}>
-        <div className="field-group">
-          <label className="label">{t('tier2.jobTitleLabel')} <span style={{ color: 'var(--accent)' }}>*</span></label>
-          <input
-            className="input"
-            type="text"
-            value={state.jobTitle}
-            onChange={(e) => setState((s) => ({ ...s, jobTitle: e.target.value }))}
-            placeholder={t('tier2.jobTitlePlaceholder')}
-            maxLength={200}
-          />
+      <section className="block">
+        <div className="block-head">
+          <h2>
+            {t('tier2.jobTitleLabel')}
+            <span style={{ color: 'var(--accent)', marginLeft: 4 }}>*</span>
+          </h2>
         </div>
+        <input
+          className="input input-lg"
+          type="text"
+          value={state.jobTitle}
+          onChange={(e) => setState((s) => ({ ...s, jobTitle: e.target.value }))}
+          placeholder={t('tier2.jobTitlePlaceholder')}
+          maxLength={200}
+        />
+      </section>
 
-        <div className="field-group">
-          <label className="label">{t('tier2.needDateLabel')}</label>
-          <input
-            className="input"
-            type="text"
-            value={state.needDate}
-            onChange={(e) => setState((s) => ({ ...s, needDate: e.target.value }))}
-            placeholder={t('tier2.needDatePlaceholder')}
-            maxLength={100}
-          />
+      <section className="block">
+        <div className="block-head">
+          <h2>
+            {da ? 'Detaljer' : 'Details'}
+            <span className="optional">{t('tier1.optional')}</span>
+          </h2>
         </div>
-
-        <div className="field-group">
-          <label className="label">{t('tier2.departmentLabel')}</label>
-          <input
-            className="input"
-            type="text"
-            value={state.department}
-            onChange={(e) => setState((s) => ({ ...s, department: e.target.value }))}
-            placeholder={t('tier2.departmentPlaceholder')}
-            maxLength={200}
-          />
-        </div>
-
-        <div className="field-group">
-          <label className="label">{t('tier2.teamCompositionLabel')}</label>
-          <textarea
-            className="input"
-            rows={3}
-            value={state.teamComposition}
-            onChange={(e) => setState((s) => ({ ...s, teamComposition: e.target.value }))}
-            placeholder={t('tier2.teamCompositionPlaceholder')}
-            maxLength={500}
-            style={{ resize: 'vertical' }}
-          />
-        </div>
-
-        <div className="field-group">
-          <label className="label">{t('tier2.outputLangLabel')}</label>
-          <div className="lang-toggle" style={{ display: 'flex', gap: 8 }}>
-            {[['da', t('tier2.languageDa')], ['en', t('tier2.languageEn')]].map(([val, label]) => (
-              <button
-                key={val}
-                type="button"
-                className={`btn ${state.outputLanguage === val ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ minWidth: 100 }}
-                onClick={() => setState((s) => ({ ...s, outputLanguage: val }))}
-              >
-                {label}
-              </button>
-            ))}
+        <div className="detail-grid">
+          <div className="field">
+            <label>{t('tier2.needDateLabel')}</label>
+            <input
+              className="input"
+              type="text"
+              value={state.needDate}
+              onChange={(e) => setState((s) => ({ ...s, needDate: e.target.value }))}
+              placeholder={t('tier2.needDatePlaceholder')}
+              maxLength={100}
+            />
+          </div>
+          <div className="field">
+            <label>{t('tier2.departmentLabel')}</label>
+            <input
+              className="input"
+              type="text"
+              value={state.department}
+              onChange={(e) => setState((s) => ({ ...s, department: e.target.value }))}
+              placeholder={t('tier2.departmentPlaceholder')}
+              maxLength={200}
+            />
           </div>
         </div>
+      </section>
 
-        <div className="field-group">
-          <label className="label">{t('tier2.jurisdictionLabel')}</label>
-          <input
-            className="input"
-            type="text"
-            value={t('tier2.jurisdictionDk')}
-            readOnly
-            style={{ color: 'var(--ink-3)', cursor: 'not-allowed' }}
-          />
+      <section className="block">
+        <div className="block-head">
+          <h2>{t('tier2.teamCompositionLabel')}</h2>
+          <div className="sub">
+            {da ? 'Beskriv hvem kandidaten skal samarbejde med' : 'Describe who the candidate will work with'}
+          </div>
         </div>
-      </div>
+        <textarea
+          className="textarea"
+          rows={3}
+          value={state.teamComposition}
+          onChange={(e) => setState((s) => ({ ...s, teamComposition: e.target.value }))}
+          placeholder={t('tier2.teamCompositionPlaceholder')}
+          maxLength={500}
+          style={{ resize: 'vertical' }}
+        />
+      </section>
+
+      <section className="block">
+        <div className="block-head">
+          <h2>{t('tier2.outputLangLabel')}</h2>
+        </div>
+        <div className="seg">
+          {[['da', t('tier2.languageDa')], ['en', t('tier2.languageEn')]].map(([val, label]) => (
+            <button
+              key={val}
+              type="button"
+              className={state.outputLanguage === val ? 'on' : ''}
+              onClick={() => setState((s) => ({ ...s, outputLanguage: val }))}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       <div className="actionbar">
         <div className="actionbar-inner">
@@ -334,7 +372,7 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
   const allFilled = FIT_FIELDS.every((f) => (state.fitCriteria?.[f] || '').trim().length > 0);
 
   return (
-    <div className="work s-input">
+    <div className="work">
       <div className="work-top">
         <button className="link-back" onClick={onBack}>
           <span className="arrow">←</span> {t('tier2.back')}
@@ -357,27 +395,29 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 640 }}>
-        {FIT_FIELDS.map((field) => (
-          <div key={field} className="ccard" style={{ padding: '20px 24px' }}>
-            <h3>{t(`tier2.${labelKey[field]}`)}</h3>
-            <p className="why" style={{ marginBottom: 12 }}>{t(`tier2.${descKey[field]}`)}</p>
-            <textarea
-              className="input"
-              rows={4}
-              value={state.fitCriteria?.[field] || ''}
-              onChange={(e) => setState((s) => ({
-                ...s,
-                fitCriteria: { ...(s.fitCriteria || {}), [field]: e.target.value },
-              }))}
-              placeholder={generating ? '…' : ''}
-              style={{ resize: 'vertical', minHeight: 80 }}
-              disabled={generating}
-            />
-            <FitFieldBias text={state.fitCriteria?.[field] || ''} language={language} />
-          </div>
-        ))}
-      </div>
+      <section className="block">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {FIT_FIELDS.map((field) => (
+            <div key={field} className="ccard">
+              <h3>{t(`tier2.${labelKey[field]}`)}</h3>
+              <p className="why" style={{ marginBottom: 12 }}>{t(`tier2.${descKey[field]}`)}</p>
+              <textarea
+                className="textarea"
+                rows={4}
+                value={state.fitCriteria?.[field] || ''}
+                onChange={(e) => setState((s) => ({
+                  ...s,
+                  fitCriteria: { ...(s.fitCriteria || {}), [field]: e.target.value },
+                }))}
+                placeholder={generating ? '…' : ''}
+                style={{ resize: 'vertical', minHeight: 80 }}
+                disabled={generating}
+              />
+              <FitFieldBias text={state.fitCriteria?.[field] || ''} language={language} />
+            </div>
+          ))}
+        </div>
+      </section>
 
       {!generating && !state.fitGenerated && (
         <div style={{ marginTop: 16 }}>
@@ -436,7 +476,7 @@ function Step4Requirements({ state, setState, onNext, onBack, t, project }) {
   const hasAtLeastOne = (state.requirements || ['']).some((b) => b.trim());
 
   return (
-    <div className="work s-input">
+    <div className="work">
       <div className="work-top">
         <button className="link-back" onClick={onBack}>
           <span className="arrow">←</span> {t('tier2.back')}
@@ -452,23 +492,35 @@ function Step4Requirements({ state, setState, onNext, onBack, t, project }) {
         <p>{t('tier2.step4Sub')}</p>
       </section>
 
-      <div className="dimension-hints" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
-        {['dim1', 'dim2', 'dim3'].map((k) => (
-          <span key={k} className="pill" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 14px', fontSize: 13, color: 'var(--ink-2)' }}>
-            {t(`tier2.${k}`)}
-          </span>
-        ))}
-      </div>
+      <section className="block">
+        <div className="block-head">
+          <h2>
+            {t('tier2.stepReqs')}
+            <span className="bullet-count">
+              {(state.requirements || ['']).filter((b) => b.trim()).length} / 10
+            </span>
+          </h2>
+          <div className="sub">
+            <span className="pills-row">
+              {['dim1', 'dim2', 'dim3'].map((k) => (
+                <span key={k} className="pill" style={{ marginRight: 6 }}>
+                  {t(`tier2.${k}`)}
+                </span>
+              ))}
+            </span>
+          </div>
+        </div>
 
-      <BulletInput
-        bullets={state.requirements || ['']}
-        onChange={(bullets) => setState((s) => ({ ...s, requirements: bullets }))}
-        language={language}
-        challengeMap={challengeMap}
-        loadingIndices={loadingIndices}
-        onDismissChallenge={dismissChallenge}
-        onAcceptChallenge={acceptChallenge}
-      />
+        <BulletInput
+          bullets={state.requirements || ['']}
+          onChange={(bullets) => setState((s) => ({ ...s, requirements: bullets }))}
+          language={language}
+          challengeMap={challengeMap}
+          loadingIndices={loadingIndices}
+          onDismissChallenge={dismissChallenge}
+          onAcceptChallenge={acceptChallenge}
+        />
+      </section>
 
       <div className="actionbar">
         <div className="actionbar-inner">
@@ -556,7 +608,7 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
   const hasAnswer = answer.trim().length > 0;
 
   return (
-    <div className="work s-input">
+    <div className="work">
       <div className="work-top">
         <button className="link-back" onClick={goBack}>
           <span className="arrow">←</span> {t('tier2.back')}
@@ -572,15 +624,17 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
         <p>{t(`tier2.${subKey}`)}</p>
       </section>
 
-      <div style={{ maxWidth: 640 }}>
-        <textarea
-          className="input"
-          rows={6}
-          value={answer}
-          onChange={(e) => setState((s) => ({ ...s, [answerKey]: e.target.value }))}
-          placeholder={t(`tier2.${phKey}`)}
-          style={{ resize: 'vertical', minHeight: 120, width: '100%' }}
-        />
+      <section className="block">
+        <div className="field">
+          <textarea
+            className="textarea"
+            rows={6}
+            value={answer}
+            onChange={(e) => setState((s) => ({ ...s, [answerKey]: e.target.value }))}
+            placeholder={t(`tier2.${phKey}`)}
+            style={{ resize: 'vertical', minHeight: 120, width: '100%' }}
+          />
+        </div>
 
         {challengeLoading && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, color: 'var(--ink-3)', fontSize: 13 }}>
@@ -590,7 +644,7 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
         )}
 
         {challenge && !challengeLoading && (
-          <div className="ccard" style={{ marginTop: 16, padding: '16px 20px', borderLeft: '3px solid var(--accent)' }}>
+          <div className="challenge" style={{ marginTop: 16 }}>
             <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--accent)', marginBottom: 8 }}>
               {t('tier2.challengeTitle')}
             </div>
@@ -601,24 +655,16 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
               </p>
             )}
             <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                className="btn btn-ghost"
-                style={{ fontSize: 13 }}
-                onClick={() => setChallenge(null)}
-              >
+              <button className="btn btn-secondary" style={{ fontSize: 13 }} onClick={() => setChallenge(null)}>
                 {t('tier2.challengeDismiss')}
               </button>
-              <button
-                className="btn btn-primary"
-                style={{ fontSize: 13 }}
-                onClick={() => setChallenge(null)}
-              >
+              <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={() => setChallenge(null)}>
                 {t('tier2.challengeAccept')}
               </button>
             </div>
           </div>
         )}
-      </div>
+      </section>
 
       <div className="actionbar">
         <div className="actionbar-inner">
@@ -720,8 +766,10 @@ export function Tier2Page({ project }) {
   }
 
   // Step advancement handlers
-  async function toStep2() {
-    await saveStep(1, { templateText: state.templateText, filename: state.templateFilename, skipped: state.skipped });
+  // FIX 4: fromSkip passed explicitly to avoid race condition with setState
+  async function toStep2({ fromSkip = false } = {}) {
+    const skipFlag = fromSkip || state.skipped;
+    await saveStep(1, { templateText: state.templateText, filename: state.templateFilename, skipped: skipFlag });
     setAppStep(2);
   }
 
@@ -753,7 +801,7 @@ export function Tier2Page({ project }) {
   if (loading) {
     return (
       <div className="app">
-        <TopBar />
+        <TopBar active="projects" />
         <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
           <div className="spinner" />
         </div>
@@ -764,43 +812,45 @@ export function Tier2Page({ project }) {
   const stepProps = { state, setState, t, project, da };
 
   return (
-    <div className="app s-tier2">
-      <TopBar />
-      {appStep === 1 && (
-        <Step1Template
-          {...stepProps}
-          onNext={toStep2}
-          onSkip={toStep2}
-        />
-      )}
-      {appStep === 2 && (
-        <Step2Info
-          {...stepProps}
-          onNext={toStep3}
-          onBack={() => setAppStep(1)}
-        />
-      )}
-      {appStep === 3 && (
-        <Step3FitCriteria
-          {...stepProps}
-          onNext={toStep4}
-          onBack={() => setAppStep(2)}
-        />
-      )}
-      {appStep === 4 && (
-        <Step4Requirements
-          {...stepProps}
-          onNext={toStep5}
-          onBack={() => setAppStep(3)}
-        />
-      )}
-      {appStep === 5 && (
-        <Step5JobAnalysis
-          {...stepProps}
-          onNext={toComplete}
-          onBack={() => setAppStep(4)}
-        />
-      )}
+    <div className="app s-input">
+      <TopBar active="projects" />
+      <main>
+        {appStep === 1 && (
+          <Step1Template
+            {...stepProps}
+            onNext={() => toStep2()}
+            onSkip={() => toStep2({ fromSkip: true })}
+          />
+        )}
+        {appStep === 2 && (
+          <Step2Info
+            {...stepProps}
+            onNext={toStep3}
+            onBack={() => setAppStep(1)}
+          />
+        )}
+        {appStep === 3 && (
+          <Step3FitCriteria
+            {...stepProps}
+            onNext={toStep4}
+            onBack={() => setAppStep(2)}
+          />
+        )}
+        {appStep === 4 && (
+          <Step4Requirements
+            {...stepProps}
+            onNext={toStep5}
+            onBack={() => setAppStep(3)}
+          />
+        )}
+        {appStep === 5 && (
+          <Step5JobAnalysis
+            {...stepProps}
+            onNext={toComplete}
+            onBack={() => setAppStep(4)}
+          />
+        )}
+      </main>
     </div>
   );
 }

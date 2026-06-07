@@ -400,6 +400,14 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.01e
   .s-input .actionbar .btn { width: 100%; justify-content: center; }
 }
 
+/* ---------- ccard base (used in s-input fit criteria + s-completeness) ---------- */
+.ccard {
+  background: var(--surface-2); border: 1px solid var(--rule); border-radius: var(--radius-lg);
+  padding: 22px 24px;
+}
+.ccard h3 { font-size: 18px; margin: 0 0 6px 0; }
+.ccard .why { font-family: var(--serif); font-style: italic; font-size: 14px; line-height: 1.5; color: var(--ink-3); margin: 0 0 14px 0; }
+
 /* ---------- 5.3 · COMPLETENESS ---------- */
 .s-completeness .work { max-width: 880px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 40px); width: 100%; }
 .s-completeness .work-top { padding: 28px 0 0 0; display: flex; align-items: center; justify-content: space-between; }
