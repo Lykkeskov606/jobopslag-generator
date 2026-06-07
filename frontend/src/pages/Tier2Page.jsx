@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
 import { BulletInput } from '../components/BulletInput';
 import { JobPostInputSection } from '../components/JobPostInputSection';
+import { InputCompletenessCheck } from '../components/InputCompletenessCheck';
 import { useBulletChallenges } from '../hooks/useBulletChallenges';
 import TopBar from '../components/TopBar';
 import Steps from '../components/Steps';
@@ -184,6 +185,7 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
   const { i18n } = useTranslation();
   const da = i18n.language === 'da';
   const language = state.outputLanguage || 'da';
+  const [subStep, setSubStep] = useState('form'); // 'form' | 'completeness'
 
   const { challengeMap, loadingIndices, dismiss: dismissChallenge, markApproved } = useBulletChallenges({
     projectId: project.id,
@@ -217,6 +219,30 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
   const filledBullets  = (state.bullets || ['']).filter((b) => b.trim()).length;
   const valid          = state.jobTitle.trim().length > 0 && filledBullets > 0;
   const openChallenges = Object.keys(challengeMap).length;
+
+  function handleNext() {
+    if (filledBullets >= 3) {
+      setSubStep('completeness');
+    } else {
+      onNext();
+    }
+  }
+
+  if (subStep === 'completeness') {
+    return (
+      <InputCompletenessCheck
+        jobTitle={state.jobTitle}
+        bullets={(state.bullets || ['']).filter((b) => b.trim())}
+        location={state.location || ''}
+        workMode={state.workMode || ''}
+        teamComposition={state.teamComposition || ''}
+        language={language}
+        projectId={project.id}
+        onBack={() => setSubStep('form')}
+        onProceed={() => onNext()}
+      />
+    );
+  }
 
   return (
     <div className="work">
@@ -266,7 +292,7 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
           </div>
           <button
             className="btn btn-primary btn-lg"
-            onClick={onNext}
+            onClick={handleNext}
             disabled={!valid}
           >
             {t('tier2.continue')}

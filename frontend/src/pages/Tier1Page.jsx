@@ -583,6 +583,7 @@ export function Tier1Page({ project }) {
             bullets={bullets.filter((b) => b.trim())}
             location={location}
             workMode={workMode}
+            teamComposition={teamComposition}
             language={language}
             projectId={project.id}
             onBack={() => setStep('input')}

@@ -17,12 +17,12 @@ import Steps from './Steps.jsx';
  *   onProceed(extraBullets)               — proceed with optional extra context
  */
 export function InputCompletenessCheck({
-  jobTitle, bullets, location, workMode = '', language, projectId,
+  jobTitle, bullets, location, workMode = '', teamComposition = '', language, projectId,
   onBack, onProceed,
 }) {
   const { t, i18n } = useTranslation();
   const lang = language === 'en' ? 'en' : 'da';
-  const missing = runCompletenessCheck({ jobTitle, bullets, location, workMode, language });
+  const missing = runCompletenessCheck({ jobTitle, bullets, location, workMode, teamComposition, language });
 
   const [notes, setNotes]     = useState({});
   const [skipped, setSkipped] = useState(new Set());
