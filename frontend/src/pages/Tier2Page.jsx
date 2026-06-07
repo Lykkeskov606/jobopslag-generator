@@ -6,6 +6,7 @@ import { BulletInput } from '../components/BulletInput';
 import { JobPostInputSection } from '../components/JobPostInputSection';
 import { InputCompletenessCheck } from '../components/InputCompletenessCheck';
 import { useBulletChallenges } from '../hooks/useBulletChallenges';
+import { useScrollAnchor } from '../hooks/useScrollAnchor';
 import TopBar from '../components/TopBar';
 import Steps from '../components/Steps';
 
@@ -310,6 +311,8 @@ const FIT_FIELDS = ['job_fit', 'team_fit', 'leader_fit', 'culture_fit'];
 function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
   const [generating, setGenerating] = useState(false);
   const language = state.outputLanguage || 'da';
+  const fitSuggestionCount = Object.values(state.fitSuggestions || {}).filter(Boolean).length;
+  useScrollAnchor(fitSuggestionCount);
 
   async function generate() {
     setGenerating(true);
@@ -584,6 +587,7 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
   const [subStep, setSubStep] = useState(1);
   const [challenge, setChallenge] = useState(null);
   const [challengeLoading, setChallengeLoading] = useState(false);
+  useScrollAnchor(challenge ? 1 : 0);
   const challengeTimer = useRef(null);
 
   const qType = JA_QUESTION_TYPES[subStep - 1];

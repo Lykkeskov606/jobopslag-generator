@@ -1,7 +1,8 @@
-import { useRef, useLayoutEffect } from 'react';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { checkBulletBias } from '../lib/biasRules';
 import { BulletChallengeCard } from './BulletChallengeCard';
+import { useScrollAnchor } from '../hooks/useScrollAnchor';
 
 export function InlineBiasWarnings({ text, language }) {
   const violations = checkBulletBias(text, language);
@@ -35,29 +36,7 @@ export function BulletInput({
 }) {
   const { t, i18n } = useTranslation();
   const refs = useRef([]);
-
-  // Scroll anchoring: keep focused element stationary when a challenge card
-  // is inserted. Capture position during render (old DOM intact), compensate
-  // with window.scrollBy in useLayoutEffect (after commit, before paint).
-  const prevChallengeCountRef = useRef(0);
-  const scrollAnchorRef = useRef(null);
-
-  const currentChallengeCount = Object.keys(challengeMap).length;
-  if (currentChallengeCount > prevChallengeCountRef.current) {
-    const el = document.activeElement;
-    if (el && el !== document.body) {
-      scrollAnchorRef.current = { el, top: el.getBoundingClientRect().top };
-    }
-  }
-  prevChallengeCountRef.current = currentChallengeCount;
-
-  useLayoutEffect(() => {
-    if (!scrollAnchorRef.current) return;
-    const { el, top: savedTop } = scrollAnchorRef.current;
-    scrollAnchorRef.current = null;
-    const delta = el.getBoundingClientRect().top - savedTop;
-    if (Math.abs(delta) > 0) window.scrollBy(0, delta);
-  }, [challengeMap]);
+  useScrollAnchor(Object.keys(challengeMap).length);
 
   const da = i18n.language === 'da';
 
