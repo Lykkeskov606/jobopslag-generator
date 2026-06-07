@@ -7,33 +7,33 @@ const { computeDailyMetrics } = require('../services/metrics');
 router.use(requireAdmin);
 
 function parseDays(req) {
-  return parseInt(req.query.days) || 30;
+  const n = parseInt(req.query.days, 10);
+  return (!isNaN(n) && n >= 1 && n <= 365) ? n : 30;
 }
 
 // GET /api/admin/business — KPIs
 router.get('/business', async (req, res, next) => {
   try {
     const days = parseDays(req);
-    const since = `NOW() - INTERVAL '${days} days'`;
 
     const [users, projects, revenue, topUsers] = await Promise.all([
       db.query(`
         SELECT
           COUNT(*) AS total_users,
-          COUNT(*) FILTER (WHERE created_at >= ${since}) AS new_signups,
-          COUNT(*) FILTER (WHERE last_login >= ${since}) AS active_users,
+          COUNT(*) FILTER (WHERE created_at >= NOW() - $1 * INTERVAL '1 day') AS new_signups,
+          COUNT(*) FILTER (WHERE last_login >= NOW() - $1 * INTERVAL '1 day') AS active_users,
           COUNT(*) FILTER (WHERE subscription_tier != 'free') AS paid_users,
           COUNT(*) FILTER (WHERE subscription_tier = 'tier1_monthly') AS tier1_monthly,
           COUNT(*) FILTER (WHERE subscription_tier = 'tier2_monthly') AS tier2_monthly
         FROM users WHERE account_status = 'active'
-      `),
+      `, [days]),
       db.query(`
         SELECT
           COUNT(*) AS total,
           COUNT(*) FILTER (WHERE tier = 1) AS tier1,
           COUNT(*) FILTER (WHERE tier = 2) AS tier2,
           COUNT(*) FILTER (WHERE status = 'completed') AS completed,
-          COUNT(*) FILTER (WHERE created_at >= ${since}) AS recent,
+          COUNT(*) FILTER (WHERE created_at >= NOW() - $1 * INTERVAL '1 day') AS recent,
           ROUND(
             COUNT(*) FILTER (WHERE status = 'completed')::numeric /
             NULLIF(COUNT(*), 0) * 100, 1
@@ -41,7 +41,7 @@ router.get('/business', async (req, res, next) => {
           COUNT(*) FILTER (WHERE output_language = 'da') AS lang_da,
           COUNT(*) FILTER (WHERE output_language = 'en') AS lang_en
         FROM projects
-      `),
+      `, [days]),
       db.query(`
         SELECT
           SUM(CASE WHEN subscription_tier = 'tier1_monthly' THEN 19900 ELSE 0 END +
@@ -73,7 +73,6 @@ router.get('/business', async (req, res, next) => {
 router.get('/operational', async (req, res, next) => {
   try {
     const days = parseDays(req);
-    const since = `NOW() - INTERVAL '${days} days'`;
 
     const [aiCost, latency, topErrors] = await Promise.all([
       db.query(`
@@ -85,10 +84,10 @@ router.get('/operational', async (req, res, next) => {
           output_type
         FROM ai_calls ac
         LEFT JOIN project_outputs po ON po.project_id = ac.project_id
-        WHERE ac.created_at >= ${since}
+        WHERE ac.created_at >= NOW() - $1 * INTERVAL '1 day'
         GROUP BY output_type
         ORDER BY total_cost_cents DESC
-      `),
+      `, [days]),
       db.query(`
         SELECT
           PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY latency_ms) AS p50,
@@ -96,16 +95,16 @@ router.get('/operational', async (req, res, next) => {
           PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY latency_ms) AS p99,
           AVG(latency_ms) AS avg_ms
         FROM ai_calls
-        WHERE created_at >= ${since} AND latency_ms IS NOT NULL
-      `),
+        WHERE created_at >= NOW() - $1 * INTERVAL '1 day' AND latency_ms IS NOT NULL
+      `, [days]),
       db.query(`
         SELECT event_data->>'error' AS error_type, COUNT(*) AS occurrences
         FROM events
-        WHERE event_type = 'error' AND created_at >= ${since}
+        WHERE event_type = 'error' AND created_at >= NOW() - $1 * INTERVAL '1 day'
         GROUP BY error_type
         ORDER BY occurrences DESC
         LIMIT 10
-      `),
+      `, [days]),
     ]);
 
     res.json({
@@ -122,7 +121,6 @@ router.get('/operational', async (req, res, next) => {
 router.get('/product', async (req, res, next) => {
   try {
     const days = parseDays(req);
-    const since = `NOW() - INTERVAL '${days} days'`;
 
     const [biasStats, funnelData, outputQuality] = await Promise.all([
       db.query(`
@@ -136,29 +134,29 @@ router.get('/product', async (req, res, next) => {
             NULLIF(COUNT(*), 0) * 100, 1
           ) AS resolve_rate_pct
         FROM bias_violations
-        WHERE created_at >= ${since}
+        WHERE created_at >= NOW() - $1 * INTERVAL '1 day'
         GROUP BY rule_triggered
         ORDER BY total_triggers DESC
         LIMIT 20
-      `),
+      `, [days]),
       db.query(`
         SELECT
           completion_step,
           COUNT(*) AS projects_at_step,
           ROUND(AVG(EXTRACT(EPOCH FROM (updated_at - created_at))/60), 0) AS median_minutes
         FROM projects
-        WHERE tier = 2 AND created_at >= ${since}
+        WHERE tier = 2 AND created_at >= NOW() - $1 * INTERVAL '1 day'
         GROUP BY completion_step
         ORDER BY completion_step
-      `),
+      `, [days]),
       db.query(`
         SELECT
           COUNT(*) FILTER (WHERE status = 'completed') AS downloaded,
           COUNT(*) AS total,
           ROUND(COUNT(*) FILTER (WHERE status = 'completed')::numeric / NULLIF(COUNT(*), 0) * 100, 1) AS download_rate_pct
         FROM projects
-        WHERE created_at >= ${since}
-      `),
+        WHERE created_at >= NOW() - $1 * INTERVAL '1 day'
+      `, [days]),
     ]);
 
     res.json({
@@ -177,8 +175,9 @@ router.get('/metrics-history', async (req, res, next) => {
     const days = parseDays(req);
     const { rows } = await db.query(
       `SELECT * FROM daily_metrics
-       WHERE date >= CURRENT_DATE - INTERVAL '${days} days'
-       ORDER BY date DESC`
+       WHERE date >= CURRENT_DATE - $1 * INTERVAL '1 day'
+       ORDER BY date DESC`,
+      [days]
     );
     res.json(rows);
   } catch (err) {

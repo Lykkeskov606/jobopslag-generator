@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { z } = require('zod');
 const { requireAuth } = require('../middleware/auth');
+const { aiLimiter } = require('../middleware/rateLimiter');
 const { runBulletChallenges } = require('../services/bulletChallengeService');
 
 const schema = z.object({
@@ -15,7 +16,7 @@ router.use(requireAuth);
 
 // POST /api/generate/bullet-challenges
 // Per-bullet evidence + qualification challenges. Never errors — graceful degradation.
-router.post('/bullet-challenges', async (req, res, next) => {
+router.post('/bullet-challenges', aiLimiter, async (req, res, next) => {
   try {
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.json({ challenges: [] });

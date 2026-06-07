@@ -4,6 +4,7 @@ const multer = require('multer');
 const { z } = require('zod');
 const mammoth = require('mammoth');
 const { requireAuth } = require('../middleware/auth');
+const { aiLimiter } = require('../middleware/rateLimiter');
 const { runBiasCheck, checkTierC } = require('../services/biasEngine');
 const { generateJobPosting } = require('../services/claudeService');
 const db = require('../db');
@@ -136,7 +137,7 @@ function multerErrorHandler(err, req, res, next) {
 }
 
 // POST /api/generate/tier1 — run bias check + generate 2 variants
-router.post('/tier1', upload.single('template'), multerErrorHandler, async (req, res, next) => {
+router.post('/tier1', aiLimiter, upload.single('template'), multerErrorHandler, async (req, res, next) => {
   // ── Payment gate (Fase 7 — Stripe). Superadmin always bypasses. ──────────────
   const isSuperAdmin = req.user.role === 'superadmin';
   // TODO Fase 7: if (!isSuperAdmin) { check subscription tier / credits here }
