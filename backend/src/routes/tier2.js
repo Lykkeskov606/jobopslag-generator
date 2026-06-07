@@ -25,7 +25,10 @@ const upload = multer({
 
 async function isMember(projectId, userId) {
   const { rows } = await db.query(
-    `SELECT 1 FROM project_members WHERE project_id = $1 AND user_id = $2`,
+    `SELECT 1 FROM project_members pm
+     JOIN projects p ON p.id = pm.project_id
+     WHERE pm.project_id = $1 AND pm.user_id = $2
+       AND p.deleted_at IS NULL`,
     [projectId, userId]
   );
   return rows.length > 0;
@@ -88,23 +91,50 @@ router.post('/save-step', async (req, res, next) => {
 
 // ── POST /api/tier2/parse-template ───────────────────────────────────────────
 
-router.post('/parse-template', upload.single('template'), async (req, res, next) => {
-  try {
-    if (!req.file) return res.json({ templateText: null, filename: null });
-
-    let text = '';
-    if (req.file.originalname.toLowerCase().endsWith('.docx')) {
-      const { value } = await mammoth.extractRawText({ buffer: req.file.buffer });
-      text = value.slice(0, 3000);
-    } else {
-      // PDF: fall back to raw buffer text (basic extraction; PDF.js not available server-side)
-      text = req.file.buffer.toString('latin1').replace(/[^\x20-\x7E\n\r]/g, ' ').slice(0, 3000);
+router.post('/parse-template', (req, res, next) => {
+  upload.single('template')(req, res, async (multerErr) => {
+    if (multerErr) {
+      const message = multerErr.code === 'LIMIT_FILE_SIZE'
+        ? 'Filen er for stor. Maks. 5 MB er tilladt.'
+        : 'Kunne ikke uploade filen. Prøv igen.';
+      return res.status(400).json({ error: 'TEMPLATE_PARSE_FAILED', message });
     }
 
-    res.json({ templateText: text.trim() || null, filename: req.file.originalname });
-  } catch (err) {
-    res.json({ templateText: null, filename: null, error: 'Could not parse template' });
-  }
+    try {
+      if (!req.file) return res.json({ templateText: null, filename: null });
+
+      let text = '';
+      if (req.file.originalname.toLowerCase().endsWith('.docx')) {
+        const { value } = await mammoth.extractRawText({ buffer: req.file.buffer });
+        text = value.slice(0, 3000);
+      } else {
+        // PDF: basic text extraction — PDF.js not available server-side
+        text = req.file.buffer.toString('latin1').replace(/[^\x20-\x7E\n\r]/g, ' ').slice(0, 3000);
+        const meaningful = text.replace(/\s+/g, ' ').trim();
+        if (meaningful.length < 50) {
+          return res.status(400).json({
+            error: 'TEMPLATE_PARSE_FAILED',
+            message: 'PDF\'en ser ud til at være scannet og indeholder ikke læsbar tekst. Prøv en .docx-fil eller spring over.',
+          });
+        }
+      }
+
+      const trimmed = text.trim();
+      if (!trimmed) {
+        return res.status(400).json({
+          error: 'TEMPLATE_PARSE_FAILED',
+          message: 'Kunne ikke læse template-filen. Prøv en anden fil eller spring over.',
+        });
+      }
+
+      res.json({ templateText: trimmed, filename: req.file.originalname });
+    } catch (err) {
+      res.status(400).json({
+        error: 'TEMPLATE_PARSE_FAILED',
+        message: 'Kunne ikke læse template-filen. Prøv en anden fil eller spring over.',
+      });
+    }
+  });
 });
 
 // ── POST /api/tier2/fit-criteria — AI generates fit criteria ─────────────────

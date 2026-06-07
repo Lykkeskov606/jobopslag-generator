@@ -1,10 +1,10 @@
 const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@jobopslag-generator.dk';
 
 async function sendPasswordResetEmail(to, resetLink) {
-  if (!process.env.RESEND_API_KEY) {
+  if (!resend) {
     console.warn('[emails] RESEND_API_KEY not set — reset link:', resetLink);
     return;
   }
