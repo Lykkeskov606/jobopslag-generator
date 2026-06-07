@@ -10,6 +10,8 @@ export function JobPostInputSection({
   startDate, setStartDate,
   employmentType, setEmploymentType,
   workMode, setWorkMode,
+  department = '', setDepartment = () => {},
+  teamComposition = '', setTeamComposition = () => {},
   challengeMap = {},
   loadingIndices = new Set(),
   onDismissChallenge,
@@ -145,6 +147,29 @@ export function JobPostInputSection({
               <option value="Fuldt remote">{da ? 'Fuldt remote' : 'Fully remote'}</option>
             </select>
           </div>
+          <div className="field">
+            <label>{t('tier1.departmentLabel')}</label>
+            <input
+              className="input"
+              type="text"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              placeholder={t('tier1.departmentPlaceholder')}
+              maxLength={200}
+            />
+          </div>
+        </div>
+        <div className="field" style={{ marginTop: 'var(--s-3)' }}>
+          <label>{t('tier1.teamCompositionLabel')}</label>
+          <textarea
+            className="textarea"
+            rows={3}
+            value={teamComposition}
+            onChange={(e) => setTeamComposition(e.target.value)}
+            placeholder={t('tier1.teamCompositionPlaceholder')}
+            maxLength={500}
+            style={{ resize: 'vertical' }}
+          />
         </div>
       </section>
     </>

@@ -204,13 +204,15 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
     dismissChallenge(i);
   }
 
-  const setJobTitle       = (v) => setState((s) => ({ ...s, jobTitle: v }));
-  const setBullets        = (v) => setState((s) => ({ ...s, bullets: v }));
-  const setLanguage       = (v) => setState((s) => ({ ...s, outputLanguage: v }));
-  const setLocation       = (v) => setState((s) => ({ ...s, location: v }));
-  const setStartDate      = (v) => setState((s) => ({ ...s, startDate: v }));
-  const setEmploymentType = (v) => setState((s) => ({ ...s, employmentType: v }));
-  const setWorkMode       = (v) => setState((s) => ({ ...s, workMode: v }));
+  const setJobTitle        = (v) => setState((s) => ({ ...s, jobTitle: v }));
+  const setBullets         = (v) => setState((s) => ({ ...s, bullets: v }));
+  const setLanguage        = (v) => setState((s) => ({ ...s, outputLanguage: v }));
+  const setLocation        = (v) => setState((s) => ({ ...s, location: v }));
+  const setStartDate       = (v) => setState((s) => ({ ...s, startDate: v }));
+  const setEmploymentType  = (v) => setState((s) => ({ ...s, employmentType: v }));
+  const setWorkMode        = (v) => setState((s) => ({ ...s, workMode: v }));
+  const setDepartment      = (v) => setState((s) => ({ ...s, department: v }));
+  const setTeamComposition = (v) => setState((s) => ({ ...s, teamComposition: v }));
 
   const filledBullets  = (state.bullets || ['']).filter((b) => b.trim()).length;
   const valid          = state.jobTitle.trim().length > 0 && filledBullets > 0;
@@ -233,77 +235,22 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
         <p>{t('tier2.step2Sub')}</p>
       </section>
 
-      {/* Shared Tier 1 input */}
+      {/* Shared input section — same fields as Tier 1 incl. department + team composition */}
       <JobPostInputSection
-        jobTitle={state.jobTitle}             setJobTitle={setJobTitle}
-        bullets={state.bullets || ['']}       setBullets={setBullets}
-        language={language}                   setLanguage={setLanguage}
-        location={state.location || ''}       setLocation={setLocation}
-        startDate={state.startDate || ''}     setStartDate={setStartDate}
+        jobTitle={state.jobTitle}                  setJobTitle={setJobTitle}
+        bullets={state.bullets || ['']}            setBullets={setBullets}
+        language={language}                        setLanguage={setLanguage}
+        location={state.location || ''}            setLocation={setLocation}
+        startDate={state.startDate || ''}          setStartDate={setStartDate}
         employmentType={state.employmentType || ''} setEmploymentType={setEmploymentType}
-        workMode={state.workMode || ''}       setWorkMode={setWorkMode}
+        workMode={state.workMode || ''}            setWorkMode={setWorkMode}
+        department={state.department || ''}        setDepartment={setDepartment}
+        teamComposition={state.teamComposition || ''} setTeamComposition={setTeamComposition}
         challengeMap={challengeMap}
         loadingIndices={loadingIndices}
         onDismissChallenge={dismissChallenge}
         onAcceptChallenge={handleAcceptChallenge}
       />
-
-      {/* Tier 2-only: recruitment context */}
-      <section className="block">
-        <div className="block-head">
-          <h2>
-            {da ? 'Rekrutterings-kontekst' : 'Recruitment context'}
-            <span className="optional">{t('tier1.optional')}</span>
-          </h2>
-          <div className="sub">
-            {da
-              ? 'Bruges til fit-kriterier og kandidatprofil i de næste trin.'
-              : 'Used for fit criteria and candidate profile in the next steps.'}
-          </div>
-        </div>
-        <div className="detail-grid">
-          <div className="field">
-            <label>{t('tier2.needDateLabel')}</label>
-            <input
-              className="input"
-              type="text"
-              value={state.needDate || ''}
-              onChange={(e) => setState((s) => ({ ...s, needDate: e.target.value }))}
-              placeholder={t('tier2.needDatePlaceholder')}
-              maxLength={100}
-            />
-          </div>
-          <div className="field">
-            <label>{t('tier2.departmentLabel')}</label>
-            <input
-              className="input"
-              type="text"
-              value={state.department || ''}
-              onChange={(e) => setState((s) => ({ ...s, department: e.target.value }))}
-              placeholder={t('tier2.departmentPlaceholder')}
-              maxLength={200}
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="block">
-        <div className="block-head">
-          <h2>{t('tier2.teamCompositionLabel')}</h2>
-          <div className="sub">
-            {da ? 'Beskriv hvem kandidaten skal samarbejde med.' : 'Describe who the candidate will work with.'}
-          </div>
-        </div>
-        <textarea
-          className="textarea"
-          rows={3}
-          value={state.teamComposition || ''}
-          onChange={(e) => setState((s) => ({ ...s, teamComposition: e.target.value }))}
-          placeholder={t('tier2.teamCompositionPlaceholder')}
-          maxLength={500}
-          style={{ resize: 'vertical' }}
-        />
-      </section>
 
       <div className="actionbar">
         <div className="actionbar-inner">
@@ -752,7 +699,7 @@ export function Tier2Page({ project }) {
       jobTitle: project.name !== 'Unavngivet kladde' && project.name !== 'Untitled draft' ? project.name : '',
       bullets: [''],
       location: '', startDate: '', employmentType: '', workMode: '',
-      needDate: '', department: '', teamComposition: '',
+      department: '', teamComposition: '',
       outputLanguage: project.output_language || 'da',
       // Step 3
       fitCriteria: { job_fit: '', team_fit: '', leader_fit: '', culture_fit: '' },
@@ -795,7 +742,6 @@ export function Tier2Page({ project }) {
             next.startDate       = steps[2].startDate ?? '';
             next.employmentType  = steps[2].employmentType ?? '';
             next.workMode        = steps[2].workMode ?? '';
-            next.needDate        = steps[2].needDate ?? '';
             next.department      = steps[2].department ?? '';
             next.teamComposition = steps[2].teamComposition ?? '';
             next.outputLanguage  = steps[2].outputLanguage ?? 'da';
@@ -848,7 +794,6 @@ export function Tier2Page({ project }) {
       employmentType: state.employmentType,
       workMode: state.workMode,
       department: state.department,
-      needDate: state.needDate,
       teamComposition: state.teamComposition,
       outputLanguage: state.outputLanguage,
     });

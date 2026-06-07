@@ -71,8 +71,8 @@ router.post('/', async (req, res, next) => {
     try {
       await client.query('BEGIN');
       const { rows } = await client.query(
-        `INSERT INTO projects (owner_id, name, tier, output_language)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO projects (owner_id, name, tier, output_language, jurisdiction)
+         VALUES ($1, $2, $3, $4, 'dk')
          RETURNING id, name, tier, status, output_language, completion_step, created_at`,
         [req.user.id, name, tier, output_language]
       );

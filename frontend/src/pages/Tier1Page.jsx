@@ -342,6 +342,8 @@ export function Tier1Page({ project }) {
   const [startDate, setStartDate]             = useState('');
   const [employmentType, setEmploymentType]   = useState('');
   const [workMode, setWorkMode]               = useState('');
+  const [department, setDepartment]           = useState('');
+  const [teamComposition, setTeamComposition] = useState('');
   const [templateFile, setTemplateFile]       = useState(null);
   const [biasWarnings, setBiasWarnings]       = useState([]);
   const [variantA, setVariantA]               = useState('');
@@ -397,6 +399,8 @@ export function Tier1Page({ project }) {
         if (d.startDate)                         setStartDate(d.startDate);
         if (d.employmentType)                    setEmploymentType(d.employmentType);
         if (d.workMode)                          setWorkMode(d.workMode);
+        if (d.department)                        setDepartment(d.department);
+        if (d.teamComposition)                   setTeamComposition(d.teamComposition);
       }
     } catch {}
   }, [storageKey]);
@@ -407,11 +411,12 @@ export function Tier1Page({ project }) {
       try {
         localStorage.setItem(storageKey, JSON.stringify({
           jobTitle, bullets, language, location, startDate, employmentType, workMode,
+          department, teamComposition,
         }));
       } catch {}
     }, 5000);
     return () => clearInterval(id);
-  }, [storageKey, jobTitle, bullets, language, location, startDate, employmentType, workMode]);
+  }, [storageKey, jobTitle, bullets, language, location, startDate, employmentType, workMode, department, teamComposition]);
 
   // Fix 4: debounced project name sync when jobTitle changes
   useEffect(() => {
@@ -953,6 +958,8 @@ export function Tier1Page({ project }) {
               startDate={startDate} setStartDate={setStartDate}
               employmentType={employmentType} setEmploymentType={setEmploymentType}
               workMode={workMode} setWorkMode={setWorkMode}
+              department={department} setDepartment={setDepartment}
+              teamComposition={teamComposition} setTeamComposition={setTeamComposition}
               challengeMap={challengeMap}
               loadingIndices={loadingIndices}
               onDismissChallenge={dismissChallenge}
