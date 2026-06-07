@@ -105,14 +105,13 @@ export const COMPLETENESS_CHECKS = [
  * @param {string}   opts.language   - 'da' | 'en'
  * @returns {Array}  array of missing COMPLETENESS_CHECKS entries
  */
-export function runCompletenessCheck({ jobTitle = '', bullets = [], location = '', workMode = '', teamComposition = '', language = 'da' }) {
+export function runCompletenessCheck({ jobTitle = '', bullets = [], location = '', workMode = '', department = '', teamComposition = '', language = 'da' }) {
   const lang = language === 'en' ? 'en' : 'da';
-  const fullText = [jobTitle, ...bullets].join(' ');
+  // Scan all user-typed text: bullets, job title, department field, team composition field.
+  // Field presence alone does not resolve a check — the pattern must match the content.
+  const fullText = [jobTitle, ...bullets, department, teamComposition].join(' ');
 
   return COMPLETENESS_CHECKS.filter((check) => {
-    // team_size: auto-resolved if teamComposition field is filled
-    if (check.id === 'team_size' && teamComposition.trim()) return false;
-
     // For remote_policy: also check the location field and workMode dropdown
     if (check.detectInLocation) {
       const locPattern = check.detectInLocation[lang];

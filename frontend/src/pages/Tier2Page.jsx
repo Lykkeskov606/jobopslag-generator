@@ -222,11 +222,7 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
   const openChallenges = Object.keys(challengeMap).length;
 
   function handleNext() {
-    if (filledBullets >= 3) {
-      setSubStep('completeness');
-    } else {
-      onNext();
-    }
+    setSubStep('completeness');
   }
 
   if (subStep === 'completeness') {
@@ -236,6 +232,7 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
         bullets={(state.bullets || ['']).filter((b) => b.trim())}
         location={state.location || ''}
         workMode={state.workMode || ''}
+        department={state.department || ''}
         teamComposition={state.teamComposition || ''}
         language={language}
         projectId={project.id}
