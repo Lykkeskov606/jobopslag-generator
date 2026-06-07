@@ -68,8 +68,11 @@ export function DashboardPage() {
   async function handleRestoreProject(e, id) {
     e.stopPropagation();
     try {
-      await api.patch(`/projects/${id}/restore`);
+      const { data } = await api.patch(`/projects/${id}/restore`);
       setTrashedProjects((prev) => prev.filter((p) => p.id !== id));
+      setProjects((prev) =>
+        [data, ...prev].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+      );
     } catch {
       alert(t('dashboard.restoreFailure'));
     }

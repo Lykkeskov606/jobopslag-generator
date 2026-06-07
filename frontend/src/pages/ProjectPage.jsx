@@ -16,7 +16,7 @@ export function ProjectPage() {
     api.get(`/projects/${id}`)
       .then((res) => setProject(res.data))
       .catch((err) => {
-        if (err.response?.status === 404) navigate('/dashboard', { replace: true });
+        if (err.response?.status === 404) setError('not_found');
         else setError('Failed to load project.');
       })
       .finally(() => setLoading(false));
@@ -26,6 +26,18 @@ export function ProjectPage() {
     return (
       <div className="project-loading">
         <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (error === 'not_found') {
+    return (
+      <div className="project-loading">
+        <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Projekt ikke fundet</p>
+        <p style={{ color: 'var(--ink-2)', marginBottom: 20 }}>
+          Opslaget eksisterer ikke, eller er blevet slettet. Tjek papirkurven på dashboardet.
+        </p>
+        <button className="link-btn" onClick={() => navigate('/dashboard')}>← Tilbage til dashboard</button>
       </div>
     );
   }
