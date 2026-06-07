@@ -2,11 +2,12 @@ import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
-import { checkBulletBias } from '../lib/biasRules';
+// checkBulletBias used inside JobPostInputSection
 import { runCompletenessCheck } from '../lib/completenessRules';
 import { InputCompletenessCheck } from '../components/InputCompletenessCheck';
 import { BulletChallengeCard } from '../components/BulletChallengeCard';
-import { BulletInput, InlineBiasWarnings } from '../components/BulletInput';
+import { BulletInput } from '../components/BulletInput';
+import { JobPostInputSection } from '../components/JobPostInputSection';
 import { useBulletChallenges } from '../hooks/useBulletChallenges';
 import TopBar from '../components/TopBar';
 import Steps from '../components/Steps';
@@ -555,7 +556,6 @@ export function Tier1Page({ project }) {
     }
   }
 
-  const titleViolations = jobTitle.trim() ? checkBulletBias(jobTitle, language) : [];
   const wordCountFinal = finalContent.trim().split(/\s+/).filter(Boolean).length;
   const wordCountA = variantA.trim().split(/\s+/).filter(Boolean).length;
   const wordCountB = variantB.trim().split(/\s+/).filter(Boolean).length;
@@ -944,142 +944,20 @@ export function Tier1Page({ project }) {
             <p>{t('tier1.introSub')}</p>
           </section>
 
-          {/* Output language toggle */}
-          <div className="outlang">
-            <span className="lbl">{t('tier1.outputLang')}</span>
-            <div className="seg">
-              <button
-                type="button"
-                className={language === 'da' ? 'on' : ''}
-                onClick={() => setLanguage('da')}
-              >
-                🇩🇰 {t('tier1.languageDa')}
-              </button>
-              <button
-                type="button"
-                className={language === 'en' ? 'on' : ''}
-                onClick={() => setLanguage('en')}
-              >
-                🇬🇧 {t('tier1.languageEn')}
-              </button>
-            </div>
-          </div>
-
           <form onSubmit={handleFormSubmit}>
-            {/* Job title */}
-            <section className="block">
-              <div className="block-head">
-                <h2>{t('tier1.jobTitleLabel')}</h2>
-                <div className="sub">{t('tier1.jobTitleSub')}</div>
-              </div>
-              <input
-                type="text"
-                className="input input-lg"
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-                placeholder={t('tier1.jobTitlePlaceholder')}
-                maxLength={200}
-                required
-              />
-              {titleViolations.length > 0 && (
-                <div className="inline-bias-list" style={{ marginTop: 'var(--s-2)' }}>
-                  {titleViolations.map((v, i) => (
-                    <div key={i} className={`inline-bias inline-bias-${v.severity}`}>
-                      <span className="inline-bias-label">{v.label}:</span>
-                      <span className="inline-bias-matches">
-                        {v.matchedTexts.map((m) => `"${m}"`).join(', ')}
-                      </span>
-                      <span className="inline-bias-tip">{v.suggestion}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* Bullets */}
-            <section className="block">
-              <div className="block-head">
-                <h2>
-                  {t('tier1.bulletsLabel')}
-                  <span className="bullet-count">
-                    {bullets.filter((b) => b.trim()).length} / 10
-                  </span>
-                </h2>
-                <div className="sub">{t('tier1.bulletsSub')}</div>
-              </div>
-              <BulletInput
-                bullets={bullets}
-                onChange={setBullets}
-                language={language}
-                challengeMap={challengeMap}
-                loadingIndices={loadingIndices}
-                onDismissChallenge={dismissChallenge}
-                onAcceptChallenge={handleAcceptChallenge}
-              />
-            </section>
-
-            {/* Details */}
-            <section className="block">
-              <div className="block-head">
-                <h2>
-                  {t('tier1.detailsLabel')}
-                  <span className="optional">{t('tier1.optional')}</span>
-                </h2>
-                <div className="sub">{t('tier1.detailsSub')}</div>
-              </div>
-              <div className="detail-grid">
-                <div className="field">
-                  <label>{t('tier1.locationLabel')}</label>
-                  <input
-                    className="input"
-                    type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder={t('tier1.locationPlaceholder')}
-                    maxLength={100}
-                  />
-                </div>
-                <div className="field">
-                  <label>{t('tier1.startDateLabel')}</label>
-                  <input
-                    className="input"
-                    type="text"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    placeholder={t('tier1.startDatePlaceholder')}
-                    maxLength={50}
-                  />
-                </div>
-                <div className="field">
-                  <label>{t('tier1.employmentTypeLabel')}</label>
-                  <select
-                    className="select"
-                    value={employmentType}
-                    onChange={(e) => setEmploymentType(e.target.value)}
-                  >
-                    <option value="">{t('tier1.selectType')}</option>
-                    <option value="Fuldtid">{da ? 'Fuldtid' : 'Full-time'}</option>
-                    <option value="Deltid">{da ? 'Deltid' : 'Part-time'}</option>
-                    <option value="Tidsbegrænset">{da ? 'Tidsbegrænset' : 'Fixed-term'}</option>
-                    <option value="Vikariat">{da ? 'Vikariat' : 'Temporary cover'}</option>
-                    <option value="Freelance">Freelance</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>{t('tier1.workModeLabel')}</label>
-                  <select
-                    className="select"
-                    value={workMode}
-                    onChange={(e) => setWorkMode(e.target.value)}
-                  >
-                    <option value="">{t('tier1.selectWorkMode')}</option>
-                    <option value="På kontoret">{da ? 'På kontoret' : 'On-site'}</option>
-                    <option value="Hybrid">Hybrid</option>
-                    <option value="Fuldt remote">{da ? 'Fuldt remote' : 'Fully remote'}</option>
-                  </select>
-                </div>
-              </div>
-            </section>
+            <JobPostInputSection
+              jobTitle={jobTitle} setJobTitle={setJobTitle}
+              bullets={bullets} setBullets={setBullets}
+              language={language} setLanguage={setLanguage}
+              location={location} setLocation={setLocation}
+              startDate={startDate} setStartDate={setStartDate}
+              employmentType={employmentType} setEmploymentType={setEmploymentType}
+              workMode={workMode} setWorkMode={setWorkMode}
+              challengeMap={challengeMap}
+              loadingIndices={loadingIndices}
+              onDismissChallenge={dismissChallenge}
+              onAcceptChallenge={handleAcceptChallenge}
+            />
 
             {/* Template upload */}
             <section className="block">

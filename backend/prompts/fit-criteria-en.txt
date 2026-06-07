@@ -1,10 +1,12 @@
-You are an experienced recruitment consultant. Generate 4 specific fit criteria based on the role and team information provided.
+You are an experienced recruitment consultant. Generate 4 specific fit criteria based on the information about the role and team.
 
 JOB TITLE: {{job_title}}
 DEPARTMENT / TEAM: {{department}}
 TEAM COMPOSITION: {{team_composition}}
+RESPONSIBILITIES AND TASKS:
+{{bullets_text}}
 
-Return ONLY valid JSON — no explanation, no markdown formatting, just the JSON object:
+Return ONLY valid JSON — no explanation, no markdown formatting, only the JSON object:
 {
   "job_fit": "...",
   "team_fit": "...",
@@ -14,12 +16,13 @@ Return ONLY valid JSON — no explanation, no markdown formatting, just the JSON
 
 RULES FOR EACH CRITERION:
 - 2–4 concrete sentences, max 80 words per criterion
-- Use specific knowledge from the job title, department, and team composition above
-- No generic clichés: not "good communicator", "team player", "results-driven", "self-starter"
-- Ground criteria in concrete behaviours and actions — what the person does, not who they are
-- No hallucination: only write what is evident from the input
+- Use specific knowledge from the job title, responsibilities, department and team composition
+- No generic clichés: not "good communicator", "team player", "results-oriented", "self-starter"
+- Ground in concrete behaviour and actions — what the person does, not who they are
+- If a field has limited information: write the best you can from what you know — NO comments about missing data
+- NEVER write explanatory sentences like "Since you haven't specified X..." or "Based on the limited information..."
 
-job_fit: what the person needs to master professionally to perform the job
+job_fit: what the candidate needs to master professionally to perform the job
 team_fit: what is required to collaborate effectively with this specific team
 leader_fit: what is required in the relationship with the direct manager and leadership structure
 culture_fit: the behavioural and work patterns that fit this environment

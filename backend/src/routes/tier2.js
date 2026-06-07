@@ -147,10 +147,11 @@ router.post('/fit-criteria', aiLimiter, async (req, res, next) => {
       department:       z.string().max(200).optional().default(''),
       team_composition: z.string().max(500).optional().default(''),
       language:         z.enum(['da', 'en']),
+      bullets:          z.array(z.string().max(500)).max(20).optional().default([]),
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
-    const { project_id, job_title, department, team_composition, language } = parsed.data;
+    const { project_id, job_title, department, team_composition, language, bullets } = parsed.data;
 
     if (!(await isMember(project_id, req.user.id))) {
       return res.status(404).json({ error: 'Project not found' });
@@ -163,6 +164,7 @@ router.post('/fit-criteria', aiLimiter, async (req, res, next) => {
       language,
       projectId: project_id,
       userId: req.user.id,
+      bullets,
     });
 
     res.json(result);

@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
-import { checkBulletBias } from '../lib/biasRules';
 import { BulletInput } from '../components/BulletInput';
+import { JobPostInputSection } from '../components/JobPostInputSection';
 import { useBulletChallenges } from '../hooks/useBulletChallenges';
 import TopBar from '../components/TopBar';
 import Steps from '../components/Steps';
@@ -35,26 +35,6 @@ function buildSteps(current, t) {
     n: i + 1,
     state: current > i + 1 ? 'done' : current === i + 1 ? 'active' : 'default',
   }));
-}
-
-// ─── Fit criteria bias check (client-side, same as bullet bias) ───────────────
-
-function FitFieldBias({ text, language }) {
-  const violations = checkBulletBias(text, language);
-  if (!violations.length) return null;
-  return (
-    <div className="inline-bias-list" style={{ marginTop: 4 }}>
-      {violations.map((v, i) => (
-        <div key={i} className={`inline-bias inline-bias-${v.severity}`}>
-          <span className="inline-bias-label">{v.label}:</span>
-          <span className="inline-bias-matches">
-            {v.matchedTexts.map((m) => `"${m}"`).join(', ')}
-          </span>
-          <span className="inline-bias-tip">{v.suggestion}</span>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 // ─── Step 1: Template upload ──────────────────────────────────────────────────
@@ -97,7 +77,7 @@ function Step1Template({ state, setState, onNext, onSkip, t, da }) {
     <div className="work">
       <div className="work-top">
         <button className="link-back" onClick={() => window.history.back()}>
-          <span className="arrow">←</span> {da ? 'Dashboard' : 'Dashboard'}
+          <span className="arrow">←</span> Dashboard
         </button>
         <div className="hide-mobile">
           <Steps steps={buildSteps(1, t)} />
@@ -198,12 +178,43 @@ function Step1Template({ state, setState, onNext, onSkip, t, da }) {
   );
 }
 
-// ─── Step 2: Basis info ───────────────────────────────────────────────────────
+// ─── Step 2: Jobopslagets indhold (reuses Tier 1 input section) ──────────────
 
 function Step2Info({ state, setState, onNext, onBack, t, project }) {
   const { i18n } = useTranslation();
   const da = i18n.language === 'da';
-  const valid = state.jobTitle.trim().length > 0;
+  const language = state.outputLanguage || 'da';
+
+  const { challengeMap, loadingIndices, dismiss: dismissChallenge, markApproved } = useBulletChallenges({
+    projectId: project.id,
+    jobTitle: state.jobTitle,
+    bullets: state.bullets || [''],
+    language,
+    debounceMs: 1800,
+  });
+
+  function handleAcceptChallenge(i, suggestion) {
+    if (!suggestion?.trim()) return;
+    markApproved(i, suggestion.trim());
+    setState((s) => {
+      const next = [...(s.bullets || [''])];
+      next[i] = suggestion.trim();
+      return { ...s, bullets: next };
+    });
+    dismissChallenge(i);
+  }
+
+  const setJobTitle       = (v) => setState((s) => ({ ...s, jobTitle: v }));
+  const setBullets        = (v) => setState((s) => ({ ...s, bullets: v }));
+  const setLanguage       = (v) => setState((s) => ({ ...s, outputLanguage: v }));
+  const setLocation       = (v) => setState((s) => ({ ...s, location: v }));
+  const setStartDate      = (v) => setState((s) => ({ ...s, startDate: v }));
+  const setEmploymentType = (v) => setState((s) => ({ ...s, employmentType: v }));
+  const setWorkMode       = (v) => setState((s) => ({ ...s, workMode: v }));
+
+  const filledBullets  = (state.bullets || ['']).filter((b) => b.trim()).length;
+  const valid          = state.jobTitle.trim().length > 0 && filledBullets > 0;
+  const openChallenges = Object.keys(challengeMap).length;
 
   return (
     <div className="work">
@@ -222,29 +233,33 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
         <p>{t('tier2.step2Sub')}</p>
       </section>
 
-      <section className="block">
-        <div className="block-head">
-          <h2>
-            {t('tier2.jobTitleLabel')}
-            <span style={{ color: 'var(--accent)', marginLeft: 4 }}>*</span>
-          </h2>
-        </div>
-        <input
-          className="input input-lg"
-          type="text"
-          value={state.jobTitle}
-          onChange={(e) => setState((s) => ({ ...s, jobTitle: e.target.value }))}
-          placeholder={t('tier2.jobTitlePlaceholder')}
-          maxLength={200}
-        />
-      </section>
+      {/* Shared Tier 1 input */}
+      <JobPostInputSection
+        jobTitle={state.jobTitle}             setJobTitle={setJobTitle}
+        bullets={state.bullets || ['']}       setBullets={setBullets}
+        language={language}                   setLanguage={setLanguage}
+        location={state.location || ''}       setLocation={setLocation}
+        startDate={state.startDate || ''}     setStartDate={setStartDate}
+        employmentType={state.employmentType || ''} setEmploymentType={setEmploymentType}
+        workMode={state.workMode || ''}       setWorkMode={setWorkMode}
+        challengeMap={challengeMap}
+        loadingIndices={loadingIndices}
+        onDismissChallenge={dismissChallenge}
+        onAcceptChallenge={handleAcceptChallenge}
+      />
 
+      {/* Tier 2-only: recruitment context */}
       <section className="block">
         <div className="block-head">
           <h2>
-            {da ? 'Detaljer' : 'Details'}
+            {da ? 'Rekrutterings-kontekst' : 'Recruitment context'}
             <span className="optional">{t('tier1.optional')}</span>
           </h2>
+          <div className="sub">
+            {da
+              ? 'Bruges til fit-kriterier og kandidatprofil i de næste trin.'
+              : 'Used for fit criteria and candidate profile in the next steps.'}
+          </div>
         </div>
         <div className="detail-grid">
           <div className="field">
@@ -252,7 +267,7 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
             <input
               className="input"
               type="text"
-              value={state.needDate}
+              value={state.needDate || ''}
               onChange={(e) => setState((s) => ({ ...s, needDate: e.target.value }))}
               placeholder={t('tier2.needDatePlaceholder')}
               maxLength={100}
@@ -263,7 +278,7 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
             <input
               className="input"
               type="text"
-              value={state.department}
+              value={state.department || ''}
               onChange={(e) => setState((s) => ({ ...s, department: e.target.value }))}
               placeholder={t('tier2.departmentPlaceholder')}
               maxLength={200}
@@ -276,13 +291,13 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
         <div className="block-head">
           <h2>{t('tier2.teamCompositionLabel')}</h2>
           <div className="sub">
-            {da ? 'Beskriv hvem kandidaten skal samarbejde med' : 'Describe who the candidate will work with'}
+            {da ? 'Beskriv hvem kandidaten skal samarbejde med.' : 'Describe who the candidate will work with.'}
           </div>
         </div>
         <textarea
           className="textarea"
           rows={3}
-          value={state.teamComposition}
+          value={state.teamComposition || ''}
           onChange={(e) => setState((s) => ({ ...s, teamComposition: e.target.value }))}
           placeholder={t('tier2.teamCompositionPlaceholder')}
           maxLength={500}
@@ -290,27 +305,18 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
         />
       </section>
 
-      <section className="block">
-        <div className="block-head">
-          <h2>{t('tier2.outputLangLabel')}</h2>
-        </div>
-        <div className="seg">
-          {[['da', t('tier2.languageDa')], ['en', t('tier2.languageEn')]].map(([val, label]) => (
-            <button
-              key={val}
-              type="button"
-              className={state.outputLanguage === val ? 'on' : ''}
-              onClick={() => setState((s) => ({ ...s, outputLanguage: val }))}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </section>
-
       <div className="actionbar">
         <div className="actionbar-inner">
-          <div />
+          <div className="meta">
+            {loadingIndices.size > 0 ? (
+              <>
+                <span className="bullet-loading-dot" style={{ marginRight: 8 }} aria-hidden="true" />
+                {da ? 'Analyserer…' : 'Analysing…'}
+              </>
+            ) : openChallenges > 0 ? (
+              <><strong>{openChallenges}</strong> {da ? 'forslag venter' : 'suggestions waiting'}</>
+            ) : null}
+          </div>
           <button
             className="btn btn-primary btn-lg"
             onClick={onNext}
@@ -330,7 +336,6 @@ const FIT_FIELDS = ['job_fit', 'team_fit', 'leader_fit', 'culture_fit'];
 
 function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
   const [generating, setGenerating] = useState(false);
-
   const language = state.outputLanguage || 'da';
 
   async function generate() {
@@ -339,9 +344,10 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
       const { data } = await api.post('/tier2/fit-criteria', {
         project_id: project.id,
         job_title: state.jobTitle,
-        department: state.department,
-        team_composition: state.teamComposition,
+        department: state.department || '',
+        team_composition: state.teamComposition || '',
         language,
+        bullets: (state.bullets || []).filter((b) => b.trim()),
       });
       setState((s) => ({
         ...s,
@@ -354,20 +360,19 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
         fitGenerated: true,
       }));
     } catch {
-      // Non-fatal — user can still type manually
+      // Non-fatal
     } finally {
       setGenerating(false);
     }
   }
 
-  // Auto-generate on first entry if not yet generated
   useEffect(() => {
     if (!state.fitGenerated && state.jobTitle.trim()) generate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const labelKey = { job_fit: 'fitJobLabel', team_fit: 'fitTeamLabel', leader_fit: 'fitLeaderLabel', culture_fit: 'fitCultureLabel' };
-  const descKey  = { job_fit: 'fitJobDesc',  team_fit: 'fitTeamDesc',  leader_fit: 'fitLeaderDesc',  culture_fit: 'fitCultureDesc'  };
+  const descKey  = { job_fit: 'fitJobDesc',  team_fit: 'fitTeamDesc',  leader_fit: 'fitLeaderDesc',  culture_fit: 'fitCultureDesc' };
 
   const allFilled = FIT_FIELDS.every((f) => (state.fitCriteria?.[f] || '').trim().length > 0);
 
@@ -413,14 +418,13 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
                 style={{ resize: 'vertical', minHeight: 80 }}
                 disabled={generating}
               />
-              <FitFieldBias text={state.fitCriteria?.[field] || ''} language={language} />
             </div>
           ))}
         </div>
       </section>
 
-      {!generating && !state.fitGenerated && (
-        <div style={{ marginTop: 16 }}>
+      {state.fitGenerated && !generating && (
+        <div style={{ marginTop: 8 }}>
           <button className="btn btn-ghost" onClick={generate}>
             {t('tier2.step3GenerateBtn')}
           </button>
@@ -443,7 +447,7 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
   );
 }
 
-// ─── Step 4: Requirements (bullets) ──────────────────────────────────────────
+// ─── Step 4: Krav (renamed to Kandidatprofil in Commit 2) ────────────────────
 
 function Step4Requirements({ state, setState, onNext, onBack, t, project }) {
   const language = state.outputLanguage || 'da';
@@ -538,7 +542,7 @@ function Step4Requirements({ state, setState, onNext, onBack, t, project }) {
   );
 }
 
-// ─── Step 5: Job analysis ─────────────────────────────────────────────────────
+// ─── Step 5: Jobanalyse ───────────────────────────────────────────────────────
 
 const JA_QUESTION_TYPES = ['best', 'worst', 'hidden'];
 
@@ -549,15 +553,10 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
   const [challengeLoading, setChallengeLoading] = useState(false);
   const challengeTimer = useRef(null);
 
-  const qType = JA_QUESTION_TYPES[subStep - 1]; // 'best' | 'worst' | 'hidden'
+  const qType = JA_QUESTION_TYPES[subStep - 1];
   const answerKey = `ja_${qType}`;
   const answer = state[answerKey] || '';
 
-  const titleKey = `step5Q${subStep}Title`;
-  const subKey   = `step5Q${subStep}Sub`;
-  const phKey    = `step5Q${subStep}Placeholder`;
-
-  // Debounced AI challenge
   useEffect(() => {
     setChallenge(null);
     clearTimeout(challengeTimer.current);
@@ -573,7 +572,7 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
         });
         if (data.challenge) setChallenge(data);
       } catch {
-        // Graceful degradation — challenge is supplementary
+        // Graceful degradation
       } finally {
         setChallengeLoading(false);
       }
@@ -582,26 +581,19 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [answer, qType]);
 
-  // Reset challenge when switching sub-step
   useEffect(() => {
     setChallenge(null);
     clearTimeout(challengeTimer.current);
   }, [subStep]);
 
   function goNext() {
-    if (subStep < 3) {
-      setSubStep((s) => s + 1);
-    } else {
-      onNext();
-    }
+    if (subStep < 3) setSubStep((s) => s + 1);
+    else onNext();
   }
 
   function goBack() {
-    if (subStep > 1) {
-      setSubStep((s) => s - 1);
-    } else {
-      onBack();
-    }
+    if (subStep > 1) setSubStep((s) => s - 1);
+    else onBack();
   }
 
   const isLastSub = subStep === 3;
@@ -620,8 +612,8 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
 
       <section className="intro">
         <div className="eyebrow">{t('tier2.subStep', { n: subStep })}</div>
-        <h1>{t(`tier2.${titleKey}`)}</h1>
-        <p>{t(`tier2.${subKey}`)}</p>
+        <h1>{t(`tier2.step5Q${subStep}Title`)}</h1>
+        <p>{t(`tier2.step5Q${subStep}Sub`)}</p>
       </section>
 
       <section className="block">
@@ -631,7 +623,7 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
             rows={6}
             value={answer}
             onChange={(e) => setState((s) => ({ ...s, [answerKey]: e.target.value }))}
-            placeholder={t(`tier2.${phKey}`)}
+            placeholder={t(`tier2.step5Q${subStep}Placeholder`)}
             style={{ resize: 'vertical', minHeight: 120, width: '100%' }}
           />
         </div>
@@ -639,12 +631,12 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
         {challengeLoading && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, color: 'var(--ink-3)', fontSize: 13 }}>
             <span className="bullet-loading-dot" aria-hidden="true" />
-            AI vurderer…
+            {' '}AI vurderer…
           </div>
         )}
 
         {challenge && !challengeLoading && (
-          <div className="challenge" style={{ marginTop: 16 }}>
+          <div className="ccard" style={{ marginTop: 16, borderLeft: '3px solid var(--accent)' }}>
             <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--accent)', marginBottom: 8 }}>
               {t('tier2.challengeTitle')}
             </div>
@@ -668,9 +660,7 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
 
       <div className="actionbar">
         <div className="actionbar-inner">
-          <div style={{ color: 'var(--ink-3)', fontSize: 13 }}>
-            {subStep} / 3
-          </div>
+          <div style={{ color: 'var(--ink-3)', fontSize: 13 }}>{subStep} / 3</div>
           <button
             className="btn btn-primary btn-lg"
             onClick={goNext}
@@ -684,7 +674,7 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
   );
 }
 
-// ─── Tier2Page — main orchestrator ────────────────────────────────────────────
+// ─── Tier2Page — orchestrator ─────────────────────────────────────────────────
 
 export function Tier2Page({ project }) {
   const navigate = useNavigate();
@@ -692,17 +682,18 @@ export function Tier2Page({ project }) {
   const da = i18n.language === 'da';
   const [appStep, setAppStep] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
-  // Unified state blob — persisted to localStorage and API
   const [state, _setState] = useState(() => {
     const draft = loadDraft(project.id);
     return draft || {
       // Step 1
       templateText: null, templateFilename: null, skipped: false,
-      // Step 2
+      // Step 2 — expanded to match Tier 1 input
       jobTitle: project.name !== 'Unavngivet kladde' && project.name !== 'Untitled draft' ? project.name : '',
-      needDate: '', department: '', teamComposition: '', outputLanguage: project.output_language || 'da',
+      bullets: [''],
+      location: '', startDate: '', employmentType: '', workMode: '',
+      needDate: '', department: '', teamComposition: '',
+      outputLanguage: project.output_language || 'da',
       // Step 3
       fitCriteria: { job_fit: '', team_fit: '', leader_fit: '', culture_fit: '' },
       fitGenerated: false,
@@ -721,27 +712,46 @@ export function Tier2Page({ project }) {
     });
   }
 
-  // Load saved steps from API on mount
   useEffect(() => {
     api.get(`/tier2/${project.id}`)
       .then(({ data }) => {
         if (!data.steps || Object.keys(data.steps).length === 0) return;
         const draft = loadDraft(project.id);
-        if (draft) return; // Prefer local draft (more recent)
+        if (draft) return;
 
         const steps = data.steps;
         _setState((prev) => {
           const next = { ...prev };
-          if (steps[1]) { next.templateText = steps[1].templateText ?? null; next.templateFilename = steps[1].filename ?? null; next.skipped = steps[1].skipped ?? false; }
-          if (steps[2]) { next.jobTitle = steps[2].jobTitle ?? prev.jobTitle; next.needDate = steps[2].needDate ?? ''; next.department = steps[2].department ?? ''; next.teamComposition = steps[2].teamComposition ?? ''; next.outputLanguage = steps[2].outputLanguage ?? 'da'; }
-          if (steps[3]) { next.fitCriteria = steps[3].fitCriteria ?? prev.fitCriteria; next.fitGenerated = true; }
+          if (steps[1]) {
+            next.templateText = steps[1].templateText ?? null;
+            next.templateFilename = steps[1].filename ?? null;
+            next.skipped = steps[1].skipped ?? false;
+          }
+          if (steps[2]) {
+            next.jobTitle        = steps[2].jobTitle ?? prev.jobTitle;
+            next.bullets         = steps[2].bullets ?? [''];
+            next.location        = steps[2].location ?? '';
+            next.startDate       = steps[2].startDate ?? '';
+            next.employmentType  = steps[2].employmentType ?? '';
+            next.workMode        = steps[2].workMode ?? '';
+            next.needDate        = steps[2].needDate ?? '';
+            next.department      = steps[2].department ?? '';
+            next.teamComposition = steps[2].teamComposition ?? '';
+            next.outputLanguage  = steps[2].outputLanguage ?? 'da';
+          }
+          if (steps[3]) {
+            next.fitCriteria = steps[3].fitCriteria ?? prev.fitCriteria;
+            next.fitGenerated = true;
+          }
           if (steps[4]) { next.requirements = steps[4].requirements ?? ['']; }
-          if (steps[5]) { next.ja_best = steps[5].best ?? ''; next.ja_worst = steps[5].worst ?? ''; next.ja_hidden = steps[5].hidden ?? ''; }
+          if (steps[5]) {
+            next.ja_best   = steps[5].best ?? '';
+            next.ja_worst  = steps[5].worst ?? '';
+            next.ja_hidden = steps[5].hidden ?? '';
+          }
 
-          // Restore step from furthest saved
           const maxStep = Math.max(...Object.keys(steps).map(Number));
           if (maxStep >= 1) setAppStep(Math.min(maxStep, 5));
-
           return next;
         });
       })
@@ -751,7 +761,6 @@ export function Tier2Page({ project }) {
   }, []);
 
   async function saveStep(stepNumber, data) {
-    setSaving(true);
     try {
       await api.post('/tier2/save-step', {
         project_id: project.id,
@@ -759,14 +768,10 @@ export function Tier2Page({ project }) {
         input_data: data,
       });
     } catch {
-      // Non-fatal — draft is in localStorage
-    } finally {
-      setSaving(false);
+      // Non-fatal
     }
   }
 
-  // Step advancement handlers
-  // FIX 4: fromSkip passed explicitly to avoid race condition with setState
   async function toStep2({ fromSkip = false } = {}) {
     const skipFlag = fromSkip || state.skipped;
     await saveStep(1, { templateText: state.templateText, filename: state.templateFilename, skipped: skipFlag });
@@ -774,8 +779,18 @@ export function Tier2Page({ project }) {
   }
 
   async function toStep3() {
-    await saveStep(2, { jobTitle: state.jobTitle, needDate: state.needDate, department: state.department, teamComposition: state.teamComposition, outputLanguage: state.outputLanguage });
-    // Sync project name
+    await saveStep(2, {
+      jobTitle: state.jobTitle,
+      bullets: state.bullets,
+      location: state.location,
+      startDate: state.startDate,
+      employmentType: state.employmentType,
+      workMode: state.workMode,
+      department: state.department,
+      needDate: state.needDate,
+      teamComposition: state.teamComposition,
+      outputLanguage: state.outputLanguage,
+    });
     if (state.jobTitle.trim()) {
       api.patch(`/projects/${project.id}`, { name: state.jobTitle.trim() }).catch(() => {});
     }
@@ -794,7 +809,6 @@ export function Tier2Page({ project }) {
 
   async function toComplete() {
     await saveStep(5, { best: state.ja_best, worst: state.ja_worst, hidden: state.ja_hidden });
-    // Steps 6-9 built in Fase 5 — for now navigate to a placeholder
     navigate(`/projects/${project.id}/outputs`);
   }
 
@@ -816,39 +830,19 @@ export function Tier2Page({ project }) {
       <TopBar active="projects" />
       <main>
         {appStep === 1 && (
-          <Step1Template
-            {...stepProps}
-            onNext={() => toStep2()}
-            onSkip={() => toStep2({ fromSkip: true })}
-          />
+          <Step1Template {...stepProps} onNext={() => toStep2()} onSkip={() => toStep2({ fromSkip: true })} />
         )}
         {appStep === 2 && (
-          <Step2Info
-            {...stepProps}
-            onNext={toStep3}
-            onBack={() => setAppStep(1)}
-          />
+          <Step2Info {...stepProps} onNext={toStep3} onBack={() => setAppStep(1)} />
         )}
         {appStep === 3 && (
-          <Step3FitCriteria
-            {...stepProps}
-            onNext={toStep4}
-            onBack={() => setAppStep(2)}
-          />
+          <Step3FitCriteria {...stepProps} onNext={toStep4} onBack={() => setAppStep(2)} />
         )}
         {appStep === 4 && (
-          <Step4Requirements
-            {...stepProps}
-            onNext={toStep5}
-            onBack={() => setAppStep(3)}
-          />
+          <Step4Requirements {...stepProps} onNext={toStep5} onBack={() => setAppStep(3)} />
         )}
         {appStep === 5 && (
-          <Step5JobAnalysis
-            {...stepProps}
-            onNext={toComplete}
-            onBack={() => setAppStep(4)}
-          />
+          <Step5JobAnalysis {...stepProps} onNext={toComplete} onBack={() => setAppStep(4)} />
         )}
       </main>
     </div>

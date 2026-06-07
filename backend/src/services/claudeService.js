@@ -374,13 +374,19 @@ async function generateJobPosting({ jobTitle, bullets, language, templateContent
 
 // ── Tier 2: fit criteria ──────────────────────────────────────────────────────
 
-async function generateFitCriteria({ jobTitle, department, teamComposition, language, projectId, userId }) {
+async function generateFitCriteria({ jobTitle, department, teamComposition, language, projectId, userId, bullets = [] }) {
   const promptFile = `fit-criteria-${language}.txt`;
   const template = readPrompt(promptFile);
+  const noInfo = language === 'da' ? '(ikke angivet)' : '(not specified)';
+  const filledBullets = bullets.filter((b) => b && b.trim());
+  const bulletsText = filledBullets.length > 0
+    ? filledBullets.map((b) => `• ${b}`).join('\n')
+    : noInfo;
   const prompt = fillTemplate(template, {
     job_title: jobTitle,
-    department: department || (language === 'da' ? '(ikke angivet)' : '(not specified)'),
-    team_composition: teamComposition || (language === 'da' ? '(ikke angivet)' : '(not specified)'),
+    department: department || noInfo,
+    team_composition: teamComposition || noInfo,
+    bullets_text: bulletsText,
   });
 
   const text = await callClaude(prompt, promptFile, projectId, userId, 3);
