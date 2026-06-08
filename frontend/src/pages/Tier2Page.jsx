@@ -225,6 +225,17 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
     setSubStep('completeness');
   }
 
+  function handleResetDraft() {
+    if (!window.confirm(da ? 'Er du sikker? Alt udfyldt her nulstilles.' : 'Are you sure? All content here will be reset.')) return;
+    localStorage.removeItem(draftKey(project.id));
+    setState((s) => ({
+      ...s,
+      jobTitle: '', bullets: [''],
+      location: '', startDate: '', employmentType: '', workMode: '',
+      department: '', teamComposition: '',
+    }));
+  }
+
   if (subStep === 'completeness') {
     return (
       <InputCompletenessCheck
@@ -297,6 +308,11 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
           </button>
         </div>
       </div>
+      <div style={{ textAlign: 'right', marginTop: 4 }}>
+        <button type="button" className="link-btn" style={{ fontSize: 12, color: 'var(--ink-3)' }} onClick={handleResetDraft}>
+          {da ? 'Nulstil kladde' : 'Reset draft'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -305,7 +321,7 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
 
 const FIT_FIELDS = ['job_fit', 'team_fit', 'leader_fit', 'culture_fit'];
 
-function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
+function Step3FitCriteria({ state, setState, onNext, onBack, t, project, da }) {
   const [generating, setGenerating] = useState(false);
   const language = state.outputLanguage || 'da';
   const fitSuggestionCount = Object.values(state.fitSuggestions || {}).filter(Boolean).length;
@@ -349,6 +365,17 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
   const descKey  = { job_fit: 'fitJobDesc',  team_fit: 'fitTeamDesc',  leader_fit: 'fitLeaderDesc',  culture_fit: 'fitCultureDesc' };
 
   const allFilled = FIT_FIELDS.every((f) => (state.fitCriteria?.[f] || '').trim().length > 0);
+
+  function handleResetDraft() {
+    if (!window.confirm(da ? 'Er du sikker? Alt udfyldt her nulstilles.' : 'Are you sure? All content here will be reset.')) return;
+    localStorage.removeItem(draftKey(project.id));
+    setState((s) => ({
+      ...s,
+      fitCriteria: { job_fit: '', team_fit: '', leader_fit: '', culture_fit: '' },
+      fitSuggestions: null,
+      fitGenerated: false,
+    }));
+  }
 
   return (
     <div className="work">
@@ -453,7 +480,9 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
 
       <div className="actionbar">
         <div className="actionbar-inner">
-          <div />
+          <button type="button" className="link-btn" style={{ fontSize: 12, color: 'var(--ink-3)' }} onClick={handleResetDraft}>
+            {da ? 'Nulstil kladde' : 'Reset draft'}
+          </button>
           <button
             className="btn btn-primary btn-lg"
             onClick={onNext}
@@ -469,7 +498,7 @@ function Step3FitCriteria({ state, setState, onNext, onBack, t, project }) {
 
 // ─── Step 4: Kandidatprofil ───────────────────────────────────────────────────
 
-function Step4CandidateProfile({ state, setState, onNext, onBack, t, project }) {
+function Step4CandidateProfile({ state, setState, onNext, onBack, t, project, da }) {
   const language = state.outputLanguage || 'da';
 
   const {
@@ -498,6 +527,12 @@ function Step4CandidateProfile({ state, setState, onNext, onBack, t, project }) 
   }
 
   const hasAtLeastOne = (state.requirements || ['']).some((b) => b.trim());
+
+  function handleResetDraft() {
+    if (!window.confirm(da ? 'Er du sikker? Alt udfyldt her nulstilles.' : 'Are you sure? All content here will be reset.')) return;
+    localStorage.removeItem(draftKey(project.id));
+    setState((s) => ({ ...s, requirements: [''] }));
+  }
 
   return (
     <div className="work">
@@ -561,7 +596,9 @@ function Step4CandidateProfile({ state, setState, onNext, onBack, t, project }) 
 
       <div className="actionbar">
         <div className="actionbar-inner">
-          <div />
+          <button type="button" className="link-btn" style={{ fontSize: 12, color: 'var(--ink-3)' }} onClick={handleResetDraft}>
+            {da ? 'Nulstil kladde' : 'Reset draft'}
+          </button>
           <button
             className="btn btn-primary btn-lg"
             onClick={onNext}
@@ -579,7 +616,7 @@ function Step4CandidateProfile({ state, setState, onNext, onBack, t, project }) 
 
 const JA_QUESTION_TYPES = ['best', 'worst', 'hidden'];
 
-function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
+function Step5JobAnalysis({ state, setState, onNext, onBack, t, project, da }) {
   const language = state.outputLanguage || 'da';
   const [subStep, setSubStep] = useState(1);
   const [challenge, setChallenge] = useState(null);
@@ -632,6 +669,14 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
 
   const isLastSub = subStep === 3;
   const hasAnswer = answer.trim().length > 0;
+
+  function handleResetDraft() {
+    if (!window.confirm(da ? 'Er du sikker? Alt udfyldt her nulstilles.' : 'Are you sure? All content here will be reset.')) return;
+    localStorage.removeItem(draftKey(project.id));
+    setState((s) => ({ ...s, ja_best: '', ja_worst: '', ja_hidden: '' }));
+    setSubStep(1);
+    setChallenge(null);
+  }
 
   return (
     <div className="work">
@@ -694,7 +739,12 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project }) {
 
       <div className="actionbar">
         <div className="actionbar-inner">
-          <div style={{ color: 'var(--ink-3)', fontSize: 13 }}>{subStep} / 3</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ color: 'var(--ink-3)', fontSize: 13 }}>{subStep} / 3</span>
+            <button type="button" className="link-btn" style={{ fontSize: 12, color: 'var(--ink-3)' }} onClick={handleResetDraft}>
+              {da ? 'Nulstil kladde' : 'Reset draft'}
+            </button>
+          </div>
           <button
             className="btn btn-primary btn-lg"
             onClick={goNext}

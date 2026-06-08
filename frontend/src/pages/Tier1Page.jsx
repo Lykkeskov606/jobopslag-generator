@@ -474,6 +474,20 @@ export function Tier1Page({ project }) {
     setStep('checklist');
   }
 
+  function handleResetDraft() {
+    if (!window.confirm(da ? 'Er du sikker? Alt udfyldt her nulstilles.' : 'Are you sure? All content here will be reset.')) return;
+    localStorage.removeItem(storageKey);
+    setJobTitle('');
+    setBullets(['', '', '', '']);
+    setLocation('');
+    setStartDate('');
+    setEmploymentType('');
+    setWorkMode('');
+    setDepartment('');
+    setTeamComposition('');
+    setTemplateFile(null);
+  }
+
   // Generate (called from checklist)
   async function doGenerate(extraBullets) {
     const currentHash = makeInputsHash(jobTitle, bullets, language, location, startDate, employmentType);
@@ -1039,6 +1053,11 @@ export function Tier1Page({ project }) {
               </div>
             </div>
           </form>
+          <div style={{ textAlign: 'right', marginTop: 4 }}>
+            <button type="button" className="link-btn" style={{ fontSize: 12, color: 'var(--ink-3)' }} onClick={handleResetDraft}>
+              {da ? 'Nulstil kladde' : 'Reset draft'}
+            </button>
+          </div>
         </div>
       </main>
     </div>
