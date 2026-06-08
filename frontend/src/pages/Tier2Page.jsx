@@ -576,13 +576,9 @@ function Step4CandidateProfile({ state, setState, onNext, onBack, t, project, da
             </span>
           </h2>
           <div className="sub">
-            <span className="pills-row">
-              {['dim1', 'dim2', 'dim3'].map((k) => (
-                <span key={k} className="pill" style={{ marginRight: 6 }}>
-                  {t(`tier2.${k}`)}
-                </span>
-              ))}
-            </span>
+            {['dim1', 'dim2', 'dim3'].map((k) => (
+              <div key={k}>· {t(`tier2.${k}`)}</div>
+            ))}
           </div>
         </div>
 
