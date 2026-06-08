@@ -19,6 +19,7 @@ import Steps from './Steps.jsx';
 export function InputCompletenessCheck({
   jobTitle, bullets, location, workMode = '', department = '', teamComposition = '', language, projectId,
   onBack, onProceed,
+  steps: stepsProp = null,
 }) {
   const { t, i18n } = useTranslation();
   const lang = language === 'en' ? 'en' : 'da';
@@ -85,12 +86,13 @@ export function InputCompletenessCheck({
     ? Math.round((addressedCount / missing.length) * 100)
     : 100;
 
-  const steps = [
+  const defaultSteps = [
     { label: t('steps.input'), state: 'done' },
     { label: t('steps.check'), state: 'active', n: 2 },
     { label: t('steps.generate'), state: 'default', n: 3 },
     { label: t('steps.download'), state: 'default', n: 4 },
   ];
+  const steps = stepsProp ?? defaultSteps;
 
   let generateLabel;
   if (noteLoadingIndices.size > 0) {

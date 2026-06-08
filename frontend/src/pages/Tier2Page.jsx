@@ -230,7 +230,7 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
     localStorage.removeItem(draftKey(project.id));
     setState((s) => ({
       ...s,
-      jobTitle: '', bullets: [''],
+      jobTitle: '', bullets: ['', '', '', ''],
       location: '', startDate: '', employmentType: '', workMode: '',
       department: '', teamComposition: '',
     }));
@@ -238,18 +238,21 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
 
   if (subStep === 'completeness') {
     return (
-      <InputCompletenessCheck
-        jobTitle={state.jobTitle}
-        bullets={(state.bullets || ['']).filter((b) => b.trim())}
-        location={state.location || ''}
-        workMode={state.workMode || ''}
-        department={state.department || ''}
-        teamComposition={state.teamComposition || ''}
-        language={language}
-        projectId={project.id}
-        onBack={() => setSubStep('form')}
-        onProceed={() => onNext()}
-      />
+      <div className="s-completeness">
+        <InputCompletenessCheck
+          jobTitle={state.jobTitle}
+          bullets={(state.bullets || ['']).filter((b) => b.trim())}
+          location={state.location || ''}
+          workMode={state.workMode || ''}
+          department={state.department || ''}
+          teamComposition={state.teamComposition || ''}
+          language={language}
+          projectId={project.id}
+          onBack={() => setSubStep('form')}
+          onProceed={() => onNext()}
+          steps={buildSteps(2, t)}
+        />
+      </div>
     );
   }
 
@@ -774,7 +777,7 @@ export function Tier2Page({ project }) {
       templateText: null, templateFilename: null, skipped: false,
       // Step 2 — expanded to match Tier 1 input
       jobTitle: project.name !== 'Unavngivet kladde' && project.name !== 'Untitled draft' ? project.name : '',
-      bullets: [''],
+      bullets: ['', '', '', ''],
       location: '', startDate: '', employmentType: '', workMode: '',
       department: '', teamComposition: '',
       outputLanguage: project.output_language || 'da',
