@@ -358,25 +358,26 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.01e
 .s-input .add-bullet:hover { color: var(--accent-2); }
 .s-input .add-bullet .plus { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; }
 .s-input .bullet-count { font-size: 12px; color: var(--ink-4); margin-left: 10px; font-family: var(--sans); font-weight: 400; }
-.s-input .challenge {
-  margin: 10px 0 4px 30px; background: var(--surface);
+.challenge {
+  margin: 10px 0 4px 0; background: var(--surface);
   border: 1px solid var(--rule); border-left: 2px solid var(--accent);
   border-radius: var(--radius); padding: 20px 22px; animation: challenge-in .3s ease;
 }
+.s-input .challenge { margin-left: 30px; }
 @keyframes challenge-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-.s-input .challenge .c-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.s-input .challenge .c-label { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; color: var(--accent-ink); }
-.s-input .challenge .c-label.precise { color: var(--status-info); }
-.s-input .challenge .c-problem { font-size: 14px; line-height: 1.55; color: var(--ink-2); margin: 0 0 12px 0; }
-.s-input .challenge .c-cite { font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--ink-3); line-height: 1.5; margin: 0 0 16px 0; padding-left: 14px; border-left: 1px solid var(--rule); }
-.s-input .challenge .c-suggest { background: var(--surface-2); border: 1px solid var(--rule); border-radius: var(--radius); padding: 13px 15px; margin-bottom: 16px; }
-.s-input .challenge .c-suggest .tag { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-4); display: block; margin-bottom: 5px; }
-.s-input .challenge .c-suggest .text { font-family: var(--serif); font-size: 15.5px; color: var(--ink); line-height: 1.45; }
-.s-input .challenge .c-actions { display: flex; align-items: center; gap: 12px; }
-.s-input .challenge .c-actions .btn { padding: 9px 16px; font-size: 13px; }
-.s-input .challenge.resolved { border-left-color: var(--status-done); background: rgba(95,122,86,0.05); }
-.s-input .challenge .c-resolved { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink-2); }
-.s-input .challenge .c-resolved .ok { width: 16px; height: 16px; border-radius: 50%; background: var(--status-done); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; }
+.challenge .c-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.challenge .c-label { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; color: var(--accent-ink); }
+.challenge .c-label.precise { color: var(--status-info); }
+.challenge .c-problem { font-size: 14px; line-height: 1.55; color: var(--ink-2); margin: 0 0 12px 0; }
+.challenge .c-cite { font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--ink-3); line-height: 1.5; margin: 0 0 16px 0; padding-left: 14px; border-left: 1px solid var(--rule); }
+.challenge .c-suggest { background: var(--surface-2); border: 1px solid var(--rule); border-radius: var(--radius); padding: 13px 15px; margin-bottom: 16px; }
+.challenge .c-suggest .tag { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-4); display: block; margin-bottom: 5px; }
+.challenge .c-suggest .text { font-family: var(--serif); font-size: 15.5px; color: var(--ink); line-height: 1.45; }
+.challenge .c-actions { display: flex; align-items: center; gap: 12px; }
+.challenge .c-actions .btn { padding: 9px 16px; font-size: 13px; }
+.challenge.resolved { border-left-color: var(--status-done); background: rgba(95,122,86,0.05); }
+.challenge .c-resolved { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink-2); }
+.challenge .c-resolved .ok { width: 16px; height: 16px; border-radius: 50%; background: var(--status-done); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; }
 .s-input .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
 .s-input .detail-grid .field { margin-bottom: 0; }
 .s-input .actionbar { margin-top: 24px; }
@@ -395,6 +396,7 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.01e
   .s-input .intro h1 { font-size: 34px; }
   .s-input .detail-grid { grid-template-columns: 1fr; }
   .s-input .challenge, .s-input .add-bullet { margin-left: 0; }
+  .challenge { margin-left: 0; }
   .s-input .bullet .num { display: none; }
   .s-input .actionbar-inner { flex-direction: column-reverse; align-items: stretch; }
   .s-input .actionbar .btn { width: 100%; justify-content: center; }
