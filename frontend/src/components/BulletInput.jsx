@@ -92,6 +92,7 @@ export function BulletInput({
               rows={1}
               value={b}
               onChange={(e) => { update(i, e.target.value); autoResize(e.target); }}
+              onPaste={(e) => { const el = e.target; setTimeout(() => { update(i, el.value); autoResize(el); }, 0); }}
               onFocus={(e) => autoResize(e.target)}
               onKeyDown={(e) => handleKeyDown(e, i)}
               placeholder={i === 0 ? p0 : pN}

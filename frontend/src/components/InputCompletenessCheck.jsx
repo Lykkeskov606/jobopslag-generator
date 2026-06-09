@@ -174,6 +174,7 @@ export function InputCompletenessCheck({
                         className="input"
                         value={noteValue}
                         onChange={(e) => setNoteValue(check.id, e.target.value)}
+                        onPaste={(e) => { const el = e.target; setTimeout(() => setNoteValue(check.id, el.value), 0); }}
                         placeholder={placeholder}
                         maxLength={200}
                       />
