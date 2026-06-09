@@ -255,6 +255,8 @@
     "stepFit": "Fit-kriterier",
     "stepReqs": "Kandidatprofil",
     "stepAnalysis": "Jobanalyse",
+    "stepBehaviors": "Adfærd",
+    "stepJobPosting": "Opslag",
     "step1Title": "Virksomhedens skabelon",
     "step1Sub": "Upload jeres eksisterende jobopslags-skabelon, så AI matcher jeres tone og struktur. Hop over dette trin, hvis I ikke har en.",
     "step1Drop": "Træk en .docx- eller .pdf-fil hertil, eller klik for at vælge",
@@ -321,7 +323,10 @@
     "nextQuestion": "Næste spørgsmål →",
     "finishAnalysis": "Afslut analyse →",
     "generating": "Gemmer og fortsætter…",
-    "loadError": "Kunne ikke hente projektdata."
+    "loadError": "Kunne ikke hente projektdata.",
+    "step6Title": "Adfærdsmønstre",
+    "step6Sub": "5 mønstre er genereret baseret på din rolle- og kandidatanalyse. Vælg de 3–4 der bedst beskriver den ideelle kandidat i praksis.",
+    "step6Generating": "Analyserer rolledata og genererer mønstre…"
   },
   "admin": {
     "title": "Admin-dashboard",

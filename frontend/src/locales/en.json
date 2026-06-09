@@ -75,6 +75,8 @@
     "stepFit": "Fit criteria",
     "stepReqs": "Candidate profile",
     "stepAnalysis": "Job analysis",
+    "stepBehaviors": "Behaviour",
+    "stepJobPosting": "Posting",
     "step1Title": "Company template",
     "step1Sub": "Upload your existing job posting template so the AI matches your tone and structure. Skip this step if you don't have one.",
     "step1Drop": "Drag a .docx or .pdf file here, or click to select",
@@ -141,7 +143,10 @@
     "nextQuestion": "Next question →",
     "finishAnalysis": "Finish analysis →",
     "generating": "Saving and continuing…",
-    "loadError": "Could not load project data."
+    "loadError": "Could not load project data.",
+    "step6Title": "Behaviour patterns",
+    "step6Sub": "5 patterns have been generated based on your role and candidate analysis. Select the 3–4 that best describe the ideal candidate in practice.",
+    "step6Generating": "Analysing role data and generating patterns…"
   },
   "admin": {
     "title": "Admin Dashboard",

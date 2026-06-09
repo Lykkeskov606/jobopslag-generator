@@ -1,0 +1,26 @@
+Du er ekspert i adfærdsbaseret rekruttering og organisationspsykologi.
+
+FIT-KRITERIER FOR ROLLEN:
+{{fit_criteria}}
+
+KANDIDATPROFIL (krav og dimensioner):
+{{candidate_profile}}
+
+JOBANALYSE (bedste/dårligste/skjulte krav):
+{{job_analysis}}
+
+OPGAVE:
+Generer præcis 5 adfærdsmønstre der adskiller de bedste medarbejdere i denne specifikke rolle fra middelmådige.
+
+Hvert mønster skal:
+• Beskrive konkrete, observerbare HANDLINGER — ikke personlighedstræk som "proaktiv" eller "struktureret"
+• Være rolle-specifikt — ikke generisk og ikke anvendeligt i enhver kontorrolle
+• Have en kort titel (3–6 ord) der beskriver hvad personen GØR, ikke hvem de er
+• Have en konkret beskrivelse (1–2 sætninger) der viser adfærden i praksis
+
+Selvvalider hvert mønster: "Kan jeg observere dette i en samtale eller se det i konkret arbejde?" Hvis ikke — omskriv det.
+
+ALDRIG brug: "proaktiv", "kommunikerer klart", "er struktureret", "er løsningsorienteret", "er selvstændig" som titler — disse er egenskaber, ikke adfærd.
+
+Return KUN dette JSON-objekt — ingen forklaring, ingen markdown, ingen tekst udenfor JSON:
+{"patterns":[{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."}]}

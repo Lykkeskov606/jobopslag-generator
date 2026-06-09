@@ -5,7 +5,7 @@ const multer = require('multer');
 const mammoth = require('mammoth');
 const { requireAuth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/rateLimiter');
-const { generateFitCriteria, challengeJobAnalysisAnswer } = require('../services/claudeService');
+const { generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns } = require('../services/claudeService');
 const { runBiasCheck } = require('../services/biasEngine');
 const db = require('../db');
 
@@ -223,6 +223,98 @@ router.post('/check-fit-bias', async (req, res, next) => {
     res.json({ warnings });
   } catch (err) {
     res.json({ warnings: [] });
+  }
+});
+
+// ── POST /api/tier2/generate-behaviors — AI generates 5 behavior patterns ────
+
+router.post('/generate-behaviors', aiLimiter, async (req, res, next) => {
+  try {
+    const schema = z.object({
+      project_id: z.string().uuid(),
+      language:   z.enum(['da', 'en']),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
+    const { project_id, language } = parsed.data;
+
+    if (!(await isMember(project_id, req.user.id))) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT step_number, input_data FROM project_inputs
+       WHERE project_id = $1 AND step_number IN (3, 4, 5)`,
+      [project_id]
+    );
+    const steps = {};
+    for (const row of rows) steps[row.step_number] = row.input_data;
+
+    const fitCriteria    = steps[3]?.fitCriteria || {};
+    const candidateProfile = steps[4]?.requirements || [];
+    const jobAnalysis    = {
+      best:   steps[5]?.best   || '',
+      worst:  steps[5]?.worst  || '',
+      hidden: steps[5]?.hidden || '',
+    };
+
+    const patterns = await generateBehaviorPatterns({
+      fitCriteria, candidateProfile, jobAnalysis, language,
+      projectId: project_id, userId: req.user.id,
+    });
+
+    const existingRow = await db.query(
+      `SELECT input_data FROM project_inputs WHERE project_id = $1 AND step_number = 6`,
+      [project_id]
+    );
+    const existingSelected = existingRow.rows[0]?.input_data?.selected || [];
+
+    await db.query(
+      `INSERT INTO project_inputs (project_id, step_number, input_data, updated_at)
+       VALUES ($1, 6, $2, NOW())
+       ON CONFLICT (project_id, step_number)
+       DO UPDATE SET input_data = $2, updated_at = NOW()`,
+      [project_id, JSON.stringify({ patterns, selected: existingSelected })]
+    );
+
+    res.json({ patterns });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/tier2/save-behaviors — save selected behavior patterns (3–4) ───
+
+router.post('/save-behaviors', async (req, res, next) => {
+  try {
+    const schema = z.object({
+      project_id: z.string().uuid(),
+      patterns:   z.array(z.object({ title: z.string(), description: z.string() })).min(5).max(5),
+      selected:   z.array(z.object({ title: z.string(), description: z.string() })).min(3).max(4),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid input — select 3 or 4 patterns' });
+    const { project_id, patterns, selected } = parsed.data;
+
+    if (!(await isMember(project_id, req.user.id))) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    await db.query(
+      `INSERT INTO project_inputs (project_id, step_number, input_data, updated_at)
+       VALUES ($1, 6, $2, NOW())
+       ON CONFLICT (project_id, step_number)
+       DO UPDATE SET input_data = $2, updated_at = NOW()`,
+      [project_id, JSON.stringify({ patterns, selected })]
+    );
+    await db.query(
+      `UPDATE projects SET completion_step = 6, updated_at = NOW() WHERE id = $1`,
+      [project_id]
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
   }
 });
 

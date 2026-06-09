@@ -1,0 +1,26 @@
+You are an expert in behavioural recruitment and organisational psychology.
+
+FIT CRITERIA FOR THE ROLE:
+{{fit_criteria}}
+
+CANDIDATE PROFILE (requirements and dimensions):
+{{candidate_profile}}
+
+JOB ANALYSIS (best/worst/hidden requirements):
+{{job_analysis}}
+
+TASK:
+Generate exactly 5 behaviour patterns that distinguish the best employees in this specific role from mediocre ones.
+
+Each pattern must:
+• Describe concrete, observable ACTIONS — not personality traits like "proactive" or "structured"
+• Be role-specific — not generic and not applicable to every office role
+• Have a short title (3–6 words) describing what the person DOES, not who they are
+• Have a concrete description (1–2 sentences) showing the behaviour in practice
+
+Self-validate each pattern: "Can I observe this in an interview or see it in concrete work output?" If not — rewrite it.
+
+NEVER use: "communicates clearly", "is proactive", "is structured", "is solution-oriented", "works independently" as titles — these are traits, not behaviours.
+
+Return ONLY this JSON object — no explanation, no markdown, no text outside the JSON:
+{"patterns":[{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."}]}

@@ -31,6 +31,8 @@ function buildSteps(current, t) {
     t('tier2.stepFit'),
     t('tier2.stepReqs'),
     t('tier2.stepAnalysis'),
+    t('tier2.stepBehaviors'),
+    t('tier2.stepJobPosting'),
   ];
   return labels.map((label, i) => ({
     label,
@@ -757,6 +759,143 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project, da }) {
   );
 }
 
+// ─── Step 6: Behavior patterns ───────────────────────────────────────────────
+
+function Step6Behaviors({ state, setState, onNext, onBack, t, project, da }) {
+  const language = state.outputLanguage || 'da';
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState(null);
+
+  const patterns = state.behaviorPatterns || [];
+  const selected = state.selectedBehaviors || [];
+
+  async function generate() {
+    setGenerating(true);
+    setGenError(null);
+    try {
+      const { data } = await api.post('/tier2/generate-behaviors', { project_id: project.id, language });
+      setState((s) => ({ ...s, behaviorPatterns: data.patterns, selectedBehaviors: [] }));
+    } catch {
+      setGenError(da ? 'Kunne ikke generere mønstre — prøv igen.' : 'Could not generate patterns — please try again.');
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  useEffect(() => {
+    if (patterns.length !== 5) generate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function togglePattern(pattern) {
+    const cur = state.selectedBehaviors || [];
+    const idx = cur.findIndex((p) => p.title === pattern.title);
+    if (idx >= 0) {
+      setState((s) => ({ ...s, selectedBehaviors: cur.filter((_, i) => i !== idx) }));
+    } else if (cur.length < 4) {
+      setState((s) => ({ ...s, selectedBehaviors: [...cur, pattern] }));
+    }
+  }
+
+  const canContinue = selected.length >= 3 && selected.length <= 4;
+
+  async function handleNext() {
+    if (!canContinue) return;
+    try {
+      await api.post('/tier2/save-behaviors', { project_id: project.id, patterns, selected });
+    } catch { /* non-fatal */ }
+    onNext();
+  }
+
+  return (
+    <div className="work">
+      <div className="work-top">
+        <button className="link-back" onClick={onBack}>
+          <span className="arrow">←</span> {t('tier2.back')}
+        </button>
+        <div className="hide-mobile">
+          <Steps steps={buildSteps(6, t)} />
+        </div>
+      </div>
+
+      <section className="intro">
+        <div className="eyebrow">{t('tier2.eyebrow')} · {t('tier2.stepBehaviors')}</div>
+        <h1>{t('tier2.step6Title')}</h1>
+        <p>{t('tier2.step6Sub')}</p>
+      </section>
+
+      {generating && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, color: 'var(--ink-2)' }}>
+          <div className="spinner" style={{ width: 18, height: 18 }} />
+          <span>{t('tier2.step6Generating')}</span>
+        </div>
+      )}
+
+      {genError && (
+        <div style={{ marginBottom: 24 }}>
+          <p className="error-text" style={{ marginBottom: 12 }}>{genError}</p>
+          <button className="btn btn-ghost" onClick={generate}>
+            {da ? 'Prøv igen' : 'Try again'}
+          </button>
+        </div>
+      )}
+
+      {!generating && patterns.length === 5 && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16, marginBottom: 12 }}>
+            {patterns.map((pattern, i) => {
+              const sel = selected.some((p) => p.title === pattern.title);
+              return (
+                <div
+                  key={i}
+                  role="button"
+                  tabIndex={0}
+                  className={`ccard${sel ? ' filled' : ''}`}
+                  style={{ cursor: 'pointer', outline: sel ? '2px solid var(--accent)' : undefined }}
+                  onClick={() => togglePattern(pattern)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePattern(pattern); }
+                  }}
+                >
+                  {sel && (
+                    <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, marginBottom: 6 }}>
+                      ✓ {da ? 'Valgt' : 'Selected'}
+                    </div>
+                  )}
+                  <h3 style={{ margin: '0 0 8px', fontSize: 15 }}>{pattern.title}</h3>
+                  <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.65 }}>{pattern.description}</p>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            <button className="btn btn-ghost" onClick={generate}>
+              {da ? 'Generér nye forslag' : 'Generate new suggestions'}
+            </button>
+          </div>
+        </>
+      )}
+
+      <div className="actionbar">
+        <div className="actionbar-inner">
+          <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+            {selected.length} {da
+              ? `af 5 valgt${selected.length < 3 ? ' — vælg mindst 3' : ''}`
+              : `of 5 selected${selected.length < 3 ? ' — select at least 3' : ''}`}
+          </div>
+          <button
+            className="btn btn-primary btn-lg"
+            onClick={handleNext}
+            disabled={generating || !canContinue}
+          >
+            {t('tier2.continue')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Tier2Page — orchestrator ─────────────────────────────────────────────────
 
 export function Tier2Page({ project }) {
@@ -785,6 +924,8 @@ export function Tier2Page({ project }) {
       requirements: [''],
       // Step 5
       ja_best: '', ja_worst: '', ja_hidden: '',
+      // Step 6
+      behaviorPatterns: [], selectedBehaviors: [],
     };
   });
 
@@ -832,9 +973,13 @@ export function Tier2Page({ project }) {
             next.ja_worst  = steps[5].worst ?? '';
             next.ja_hidden = steps[5].hidden ?? '';
           }
+          if (steps[6]) {
+            next.behaviorPatterns  = steps[6].patterns ?? [];
+            next.selectedBehaviors = steps[6].selected ?? [];
+          }
 
           const maxStep = Math.max(...Object.keys(steps).map(Number));
-          if (maxStep >= 1) setAppStep(Math.min(maxStep, 5));
+          if (maxStep >= 1) setAppStep(Math.min(maxStep, 6));
           return next;
         });
       })
@@ -889,8 +1034,12 @@ export function Tier2Page({ project }) {
     setAppStep(5);
   }
 
-  async function toComplete() {
+  async function toStep6() {
     await saveStep(5, { best: state.ja_best, worst: state.ja_worst, hidden: state.ja_hidden });
+    setAppStep(6);
+  }
+
+  async function toStep7() {
     navigate(`/projects/${project.id}/outputs`);
   }
 
@@ -924,7 +1073,10 @@ export function Tier2Page({ project }) {
           <Step4CandidateProfile {...stepProps} onNext={toStep5} onBack={() => setAppStep(3)} />
         )}
         {appStep === 5 && (
-          <Step5JobAnalysis {...stepProps} onNext={toComplete} onBack={() => setAppStep(4)} />
+          <Step5JobAnalysis {...stepProps} onNext={toStep6} onBack={() => setAppStep(4)} />
+        )}
+        {appStep === 6 && (
+          <Step6Behaviors {...stepProps} onNext={toStep7} onBack={() => setAppStep(5)} />
         )}
       </main>
     </div>

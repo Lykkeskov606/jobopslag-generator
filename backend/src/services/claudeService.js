@@ -465,4 +465,53 @@ async function challengeJobAnalysisAnswer({ questionType, answer, language, proj
   return { challenge: parsed.challenge || null, probe: parsed.probe || null };
 }
 
-module.exports = { generateJobPosting, generateFitCriteria, challengeJobAnalysisAnswer };
+// ── Tier 2: behavior patterns ─────────────────────────────────────────────────
+
+async function generateBehaviorPatterns({ fitCriteria, candidateProfile, jobAnalysis, language, projectId, userId }) {
+  const promptFile = `behavior-patterns-${language}.txt`;
+  const template = readPrompt(promptFile);
+  const isDa = language === 'da';
+  const noInfo = isDa ? '(ikke angivet)' : '(not specified)';
+
+  const fitParts = [
+    fitCriteria.job_fit     ? `${isDa ? 'Job-fit'     : 'Job fit'}: ${fitCriteria.job_fit}`     : null,
+    fitCriteria.team_fit    ? `${isDa ? 'Team-fit'    : 'Team fit'}: ${fitCriteria.team_fit}`    : null,
+    fitCriteria.leader_fit  ? `${isDa ? 'Leder-fit'   : 'Leader fit'}: ${fitCriteria.leader_fit}` : null,
+    fitCriteria.culture_fit ? `${isDa ? 'Kultur-fit'  : 'Culture fit'}: ${fitCriteria.culture_fit}` : null,
+  ].filter(Boolean);
+  const fitText = fitParts.length ? fitParts.join('\n\n') : noInfo;
+
+  const profileBullets = Array.isArray(candidateProfile) ? candidateProfile.filter((b) => b?.trim()) : [];
+  const profileText = profileBullets.length ? profileBullets.map((b) => `• ${b}`).join('\n') : noInfo;
+
+  const analysisParts = [
+    jobAnalysis.best   ? `${isDa ? 'Den bedste i rollen'    : 'Best in the role'}: ${jobAnalysis.best}`     : null,
+    jobAnalysis.worst  ? `${isDa ? 'Den dårligste i rollen' : 'Worst in the role'}: ${jobAnalysis.worst}`   : null,
+    jobAnalysis.hidden ? `${isDa ? 'Det skjulte krav'       : 'Hidden requirement'}: ${jobAnalysis.hidden}` : null,
+  ].filter(Boolean);
+  const analysisText = analysisParts.length ? analysisParts.join('\n\n') : noInfo;
+
+  const prompt = fillTemplate(template, {
+    fit_criteria:      fitText,
+    candidate_profile: profileText,
+    job_analysis:      analysisText,
+  });
+
+  const text = await callClaude(prompt, promptFile, projectId, userId, 6);
+
+  const cleaned = text.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Invalid behavior patterns response');
+
+  const parsed = JSON.parse(jsonMatch[0]);
+  if (!Array.isArray(parsed.patterns) || parsed.patterns.length < 1) {
+    throw new Error('Expected behavior patterns array');
+  }
+
+  return parsed.patterns.slice(0, 5).map((p) => ({
+    title:       String(p.title || ''),
+    description: String(p.description || ''),
+  }));
+}
+
+module.exports = { generateJobPosting, generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns };
