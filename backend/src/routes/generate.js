@@ -165,12 +165,17 @@ router.post('/tier1', aiLimiter, upload.single('template'), multerErrorHandler, 
     );
     if (!member.length) return res.status(404).json({ error: 'Project not found' });
 
-    // Extract template text if uploaded
+    // Extract template text and HTML if uploaded
     let templateContent = null;
+    let templateHtml = null;
     if (req.file) {
       try {
-        const { value } = await mammoth.extractRawText({ buffer: req.file.buffer });
-        templateContent = value.slice(0, 2000);
+        const [rawResult, htmlResult] = await Promise.all([
+          mammoth.extractRawText({ buffer: req.file.buffer }),
+          mammoth.convertToHtml({ buffer: req.file.buffer }),
+        ]);
+        templateContent = rawResult.value.slice(0, 2000);
+        templateHtml = htmlResult.value.slice(0, 12000);
       } catch { /* ignore parse errors */ }
     }
 
@@ -195,7 +200,7 @@ router.post('/tier1', aiLimiter, upload.single('template'), multerErrorHandler, 
 
     // Generate with Claude
     const { variant_a, variant_b } = await generateJobPosting({
-      jobTitle: job_title, bullets, language, templateContent,
+      jobTitle: job_title, bullets, language, templateContent, templateHtml,
       location, startDate: start_date, employmentType: employment_type,
       projectId: project_id, userId: req.user.id,
     });

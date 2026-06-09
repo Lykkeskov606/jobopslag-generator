@@ -26,99 +26,120 @@ function fillTemplate(template, vars) {
   );
 }
 
-// ── Template structure parser ─────────────────────────────────────────────────
-// Extracts headings, company text and benefits from a raw .docx text dump
-// so we can inject structured instructions rather than a raw text blob.
+// ── Template structure parser (HTML-based) ───────────────────────────────────
+// Uses mammoth's HTML output so bold-paragraph headings (common in DESMI-style
+// templates) are reliably detected, unlike raw-text heuristics which conflate
+// bullet items with headings and miss headings whose titles contain multiple
+// lowercase words.
 
-function parseDocxTemplate(rawText) {
-  if (!rawText?.trim()) return null;
-
-  const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);
-  const headings = [];
-  const sections = {};
-  let currentHeading = null;
-  let currentLines = [];
-
-  const isHeading = (line) => {
-    if (line.length > 70) return false;
-    if (/^[•\-\*]/.test(line)) return false;
-    if (/\d{4}/.test(line)) return false; // looks like a date/year, not a heading
-    // Starts with capital, no sentence punctuation mid-way
-    return /^[A-ZÆØÅ]/.test(line) && !/ [a-zæøå]{4,} [a-zæøå]{4,}/.test(line);
-  };
-
-  for (const line of lines) {
-    if (isHeading(line)) {
-      if (currentHeading !== null && currentLines.length) {
-        sections[currentHeading] = currentLines.join('\n');
-      }
-      currentHeading = line.replace(/:$/, '').trim();
-      headings.push(currentHeading);
-      currentLines = [];
-    } else if (currentHeading !== null) {
-      currentLines.push(line);
-    }
-  }
-  if (currentHeading !== null && currentLines.length) {
-    sections[currentHeading] = currentLines.join('\n');
-  }
-
-  // Find company description (Om os / About us / Om virksomheden / About the company)
-  const companyKey = headings.find((h) =>
-    /^(om os|about us|om virksomheden|about the company|vi er|who we are)/i.test(h)
-  );
-  const companyText = companyKey ? sections[companyKey] : (Object.values(sections)[0] || '');
-
-  // Find benefits section
-  const benefitsKey = headings.find((h) =>
-    /^(vi tilbyder|du får|we offer|you.ll get|benefits|perks|hvad tilbyder)/i.test(h)
-  );
-  const benefitsText = benefitsKey ? sections[benefitsKey] : '';
-
-  return { headings, sections, companyText, benefitsText, raw: rawText };
+function _stripHtmlTags(h) {
+  return h
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
+    .replace(/ +/g, ' ')
+    .trim();
 }
 
-function buildTemplateSection(parsed, language) {
-  if (!parsed || !parsed.headings.length) {
-    // Fallback: include raw text if parsing found nothing structural
-    return language === 'da'
-      ? `\nVIRKSOMHEDENS SKABELON/TONE:\n${parsed?.raw || ''}`
-      : `\nCOMPANY TEMPLATE/TONE:\n${parsed?.raw || ''}`;
+function parseDocxTemplateFromHtml(html) {
+  if (!html?.trim()) return [];
+  const sections = [];
+  let currentTitle = null, currentParagraphs = [], currentBullets = [];
+
+  function flush() {
+    if (currentTitle !== null) {
+      sections.push({ title: currentTitle, paragraphs: [...currentParagraphs], bullets: [...currentBullets] });
+    }
+    currentTitle = null; currentParagraphs = []; currentBullets = [];
   }
 
-  const headingList = parsed.headings.map((h) => `• ${h}`).join('\n');
+  const re = /<(p|ul|h[1-6])[^>]*>([\s\S]*?)<\/\1>/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const tag = m[1].toLowerCase(), inner = m[2], block = m[0];
 
-  if (language === 'da') {
-    return `
-━━━ VIRKSOMHEDENS SKABELON — FØLG PRÆCIST ━━━
+    if (/^h\d$/.test(tag)) {
+      flush();
+      currentTitle = _stripHtmlTags(inner);
+      continue;
+    }
+    if (tag === 'ul') {
+      const items = [...inner.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
+        .map(x => _stripHtmlTags(x[1])).filter(Boolean);
+      if (currentTitle !== null) currentBullets.push(...items);
+      continue;
+    }
+    // Paragraph: detect bold-only headings (DESMI style: <p><strong>Title</strong></p>
+    // or <p><strong>Title</strong><br />body...</p>)
+    const boldBr   = block.match(/^<p[^>]*><strong>([^<]{1,120})<\/strong>\s*<br\s*\/?>([\s\S]*?)<\/p>$/i);
+    const boldOnly = block.match(/^<p[^>]*>\s*<strong>([^<]{1,120})<\/strong>\s*<\/p>$/i);
+    if (boldBr) {
+      flush();
+      currentTitle = boldBr[1].replace(/:\s*$/, '').trim();
+      const body = _stripHtmlTags(boldBr[2]).trim();
+      if (body) currentParagraphs.push(body);
+    } else if (boldOnly) {
+      flush();
+      currentTitle = boldOnly[1].replace(/:\s*$/, '').trim();
+    } else {
+      const text = _stripHtmlTags(inner).trim();
+      if (text && currentTitle !== null) currentParagraphs.push(text);
+    }
+  }
+  flush();
+  return sections;
+}
 
-ANVEND DISSE SEKTIONSTITLER i denne rækkefølge (brug dem som de er, uændret):
-${headingList}
+// A section is "role-specific" if it needs AI-generated content (has role placeholders
+// or is a requirements/description section by title). Otherwise it's boilerplate
+// that should be copied verbatim.
+function _isRoleSpecific(section) {
+  const allText = [section.title, ...section.paragraphs, ...section.bullets].join(' ');
+  if (/\(Job [Tt]itle[s]?\)/.test(allText)) return true;
+  if (/\bXXX\b/.test(allText)) return true;
+  if (/\bBlank\b/.test(allText)) return true;
+  if (/\bJob [Aa]rea[s]?\b/.test(allText)) return true;
+  if (/we also imagine|we imagine|requirements?|we(?:'re| are) looking for|responsibilities|you will|your role|dine opgaver|vi søger/i.test(section.title)) return true;
+  if (!section.paragraphs.length && !section.bullets.length) return true;
+  return false;
+}
 
-${parsed.companyText ? `GENBRUG DENNE VIRKSOMHEDSTEKST ORDRET (kopier præcist — ingen parafrase, ingen tilføjelser):
-${parsed.companyText}` : ''}
+function buildTemplateSection(sections, language) {
+  if (!sections || !sections.length) return '';
 
-${parsed.benefitsText ? `GENBRUG DETTE "VI TILBYDER"-AFSNIT ORDRET:
-${parsed.benefitsText}` : ''}
+  const da = language === 'da';
+  const lines = [];
 
-TONE-REFERENCE: Match tonen og sproget i denne tekst præcist:
-${parsed.raw.slice(0, 300)}`;
+  if (da) {
+    lines.push('\n━━━ VIRKSOMHEDENS JOBOPSLAGS-SKABELON ━━━\n');
+    lines.push('ABSOLUTTE REGLER (tilsidesætter alt ovenfor):');
+    lines.push('1. Brug KUN disse sektionstitler i denne nøjagtige rækkefølge — opfind ingen nye, omdøb ingen, spring ingen over.');
+    lines.push('2. Skriv overskrifterne PRÆCIS som vist — tilføj ikke kolon, brug ikke store bogstaver, ændr intet.');
+    lines.push('3. [GENERER]-sektioner: Skriv nyt indhold baseret på bullets fra rekrutteringsansvarlig. Anvend den psykologiske tilgang fra oven i PROSATEKSTEN — ikke i strukturen.');
+    lines.push('4. [KOPIER]-sektioner: Kopiér teksten ORDRET — ingen parafrase, ingen tilføjelser, ingen ændringer.');
+    lines.push('5. Bevar ALLE placeholders præcis som vist: (Job Title), XXX, Blank o.l. — udfyld dem ikke.\n');
   } else {
-    return `
-━━━ COMPANY TEMPLATE — FOLLOW EXACTLY ━━━
-
-USE THESE SECTION HEADINGS in this order (use as-is, unchanged):
-${headingList}
-
-${parsed.companyText ? `REUSE THIS COMPANY TEXT VERBATIM (copy exactly — no paraphrasing, no additions):
-${parsed.companyText}` : ''}
-
-${parsed.benefitsText ? `REUSE THIS "WE OFFER" SECTION VERBATIM:
-${parsed.benefitsText}` : ''}
-
-TONE REFERENCE: Match the tone and language of this text precisely:
-${parsed.raw.slice(0, 300)}`;
+    lines.push('\n━━━ COMPANY JOB POSTING TEMPLATE ━━━\n');
+    lines.push('ABSOLUTE RULES (override everything above):');
+    lines.push('1. Use ONLY these section headings in this exact order — do not invent new ones, rename any, or skip any.');
+    lines.push('2. Write headings EXACTLY as shown — do not add colons, do not capitalise, do not change anything.');
+    lines.push('3. [GENERATE] sections: Write fresh content based on the recruiter\'s bullets. Apply the psychological approach from above in the PROSE — not in the structure.');
+    lines.push('4. [COPY] sections: Copy the text VERBATIM — no paraphrasing, no additions, no changes.');
+    lines.push('5. Preserve ALL placeholder tokens exactly as shown: (Job Title), XXX, Blank, etc. — do not fill them in.\n');
   }
+
+  for (const s of sections) {
+    const roleSpecific = _isRoleSpecific(s);
+    const tag = roleSpecific ? (da ? '[GENERER]' : '[GENERATE]') : (da ? '[KOPIER]' : '[COPY]');
+    lines.push(`─── ${tag} ${s.title}`);
+    if (!roleSpecific) {
+      for (const p of s.paragraphs) lines.push(p);
+      for (const b of s.bullets) lines.push(`• ${b}`);
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n');
 }
 
 // ── Refusal detection ─────────────────────────────────────────────────────────
@@ -328,12 +349,13 @@ async function callClaude(userMessage, promptFile, projectId, userId, stepNumber
 
 // ── Main generation function ──────────────────────────────────────────────────
 
-async function generateJobPosting({ jobTitle, bullets, language, templateContent, location, startDate, employmentType, projectId, userId }) {
+async function generateJobPosting({ jobTitle, bullets, language, templateContent, templateHtml, location, startDate, employmentType, projectId, userId }) {
   const promptFile = `jobopslag-${language}.txt`;
   const template = readPrompt(promptFile);
   const bulletsText = bullets.map((b) => `• ${b}`).join('\n');
-  const parsedTemplate = parseDocxTemplate(templateContent);
-  const templateSection = parsedTemplate ? buildTemplateSection(parsedTemplate, language) : '';
+  // Prefer HTML-based parsing (accurate bold-heading detection) over raw text heuristics
+  const templateSections = templateHtml ? parseDocxTemplateFromHtml(templateHtml) : [];
+  const templateSection = templateSections.length ? buildTemplateSection(templateSections, language) : '';
 
   const isDa = language === 'da';
   const contextParts = [

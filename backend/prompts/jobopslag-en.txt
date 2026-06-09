@@ -6,7 +6,6 @@ Job title: {{job_title}}
 
 ABOUT THE ROLE AND CANDIDATE (from hiring manager):
 {{bullets}}
-{{template_section}}
 
 {{shared_content_rules}}
 
@@ -31,6 +30,7 @@ CONTENT:
 
 {{variant_b_approach}}
 
+{{template_section}}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Return ONLY this — no introduction, no explanation, no comment:
