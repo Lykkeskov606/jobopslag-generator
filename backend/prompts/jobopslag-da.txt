@@ -6,6 +6,7 @@ Jobtitel: {{job_title}}
 
 OM ROLLEN OG KANDIDATEN (fra rekrutteringsansvarlig):
 {{bullets}}
+{{fit_criteria_section}}{{candidate_profile_section}}{{job_analysis_section}}{{behavior_patterns_section}}
 
 {{shared_content_rules}}
 

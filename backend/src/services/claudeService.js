@@ -349,7 +349,12 @@ async function callClaude(userMessage, promptFile, projectId, userId, stepNumber
 
 // ── Main generation function ──────────────────────────────────────────────────
 
-async function generateJobPosting({ jobTitle, bullets, language, templateContent, templateHtml, location, startDate, employmentType, projectId, userId }) {
+async function generateJobPosting({
+  jobTitle, bullets, language, templateContent, templateHtml,
+  location, startDate, employmentType,
+  fitCriteria, candidateProfile, jobAnalysis, behaviorPatterns,
+  projectId, userId,
+}) {
   const promptFile = `jobopslag-${language}.txt`;
   const template = readPrompt(promptFile);
   const bulletsText = bullets.map((b) => `• ${b}`).join('\n');
@@ -367,6 +372,48 @@ async function generateJobPosting({ jobTitle, bullets, language, templateContent
 
   const sharedRules = readSharedRules(language);
 
+  // Build optional Tier 2 context sections (non-empty only)
+  function buildOptionalSection(header, lines) {
+    const filtered = lines.filter(Boolean);
+    return filtered.length ? `\n${header}\n${filtered.join('\n')}\n` : '';
+  }
+
+  let fitCriteriaSection = '';
+  if (fitCriteria && typeof fitCriteria === 'object') {
+    const parts = [
+      fitCriteria.job_fit     && `${isDa ? 'Job-fit'     : 'Job fit'}: ${fitCriteria.job_fit}`,
+      fitCriteria.team_fit    && `${isDa ? 'Team-fit'    : 'Team fit'}: ${fitCriteria.team_fit}`,
+      fitCriteria.leader_fit  && `${isDa ? 'Leder-fit'   : 'Leader fit'}: ${fitCriteria.leader_fit}`,
+      fitCriteria.culture_fit && `${isDa ? 'Kultur-fit'  : 'Culture fit'}: ${fitCriteria.culture_fit}`,
+    ].filter(Boolean);
+    fitCriteriaSection = buildOptionalSection(isDa ? 'FIT-KRITERIER:' : 'FIT CRITERIA:', parts);
+  }
+
+  let candidateProfileSection = '';
+  if (Array.isArray(candidateProfile) && candidateProfile.some((b) => b?.trim())) {
+    const bullets2 = candidateProfile.filter((b) => b?.trim()).map((b) => `• ${b}`);
+    candidateProfileSection = buildOptionalSection(isDa ? 'KANDIDATPROFIL:' : 'CANDIDATE PROFILE:', bullets2);
+  }
+
+  let jobAnalysisSection = '';
+  if (jobAnalysis && typeof jobAnalysis === 'object') {
+    const parts = [
+      jobAnalysis.best   && `${isDa ? 'Bedste i rollen'    : 'Best in role'}: ${jobAnalysis.best}`,
+      jobAnalysis.worst  && `${isDa ? 'Dårligste i rollen' : 'Worst in role'}: ${jobAnalysis.worst}`,
+      jobAnalysis.hidden && `${isDa ? 'Skjulte krav'       : 'Hidden requirement'}: ${jobAnalysis.hidden}`,
+    ].filter(Boolean);
+    jobAnalysisSection = buildOptionalSection(isDa ? 'JOBANALYSE:' : 'JOB ANALYSIS:', parts);
+  }
+
+  let behaviorPatternsSection = '';
+  if (Array.isArray(behaviorPatterns) && behaviorPatterns.length) {
+    const lines = behaviorPatterns.map((p) => `• ${p.title}: ${p.description}`);
+    behaviorPatternsSection = buildOptionalSection(
+      isDa ? 'ADFÆRDSMØNSTRE (top 3–4 valgt af rekrutteringsansvarlig):' : 'BEHAVIOUR PATTERNS (top 3–4 selected by hiring manager):',
+      lines
+    );
+  }
+
   // Pick two different psychology approaches randomly for this generation
   const approaches = APPROACHES[language];
   const [ia, ib] = pickTwoDifferent(approaches.length);
@@ -374,13 +421,17 @@ async function generateJobPosting({ jobTitle, bullets, language, templateContent
   const variantBApproach = buildApproachBlock(approaches[ib], 'B');
 
   const prompt = fillTemplate(template, {
-    job_title: jobTitle,
-    bullets: bulletsText,
-    template_section: templateSection,
-    context_lines: contextLines,
-    shared_content_rules: sharedRules,
-    variant_a_approach: variantAApproach,
-    variant_b_approach: variantBApproach,
+    job_title:                  jobTitle,
+    bullets:                    bulletsText,
+    template_section:           templateSection,
+    context_lines:              contextLines,
+    shared_content_rules:       sharedRules,
+    variant_a_approach:         variantAApproach,
+    variant_b_approach:         variantBApproach,
+    fit_criteria_section:       fitCriteriaSection,
+    candidate_profile_section:  candidateProfileSection,
+    job_analysis_section:       jobAnalysisSection,
+    behavior_patterns_section:  behaviorPatternsSection,
   });
 
   const text = await callClaude(prompt, promptFile, projectId, userId, 2);
