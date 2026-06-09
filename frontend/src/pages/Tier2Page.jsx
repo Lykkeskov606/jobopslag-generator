@@ -759,6 +759,495 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project, da }) {
   );
 }
 
+// ─── Shared UI helpers (inlined from Tier1Page to avoid cross-page imports) ──
+
+function JobPostingPreview({ content }) {
+  if (!content) return null;
+  return (
+    <>
+      {content.split('\n').map((line, i) => {
+        const txt = line.trim();
+        if (!txt) return <div key={i} className="preview-spacer" />;
+        if (txt.endsWith(':') && txt.length < 70 && !txt.includes('. '))
+          return <p key={i} className="preview-heading">{txt}</p>;
+        if (/^[•\-\*]\s/.test(txt))
+          return (
+            <div key={i} className="preview-bullet">
+              <span className="preview-bullet-dot">•</span>
+              <span>{txt.replace(/^[•\-\*]\s*/, '')}</span>
+            </div>
+          );
+        return <p key={i} className="preview-paragraph">{txt}</p>;
+      })}
+    </>
+  );
+}
+
+function BiasPanel({ warnings, language }) {
+  const { t, i18n } = useTranslation();
+  const [dismissed, setDismissed] = useState(new Set());
+  const [expanded, setExpanded] = useState(false);
+  const da = i18n.language === 'da';
+
+  function key(w) { return `${w.category}-${w.matchedText || w.message}`; }
+  function dismiss(w) { setDismissed((p) => new Set([...p, key(w)])); }
+
+  const visible = warnings.filter((w) => !dismissed.has(key(w)));
+  if (!visible.length) return null;
+
+  function renderGroup(title, items) {
+    if (!items.length) return null;
+    return (
+      <div className="bias-group">
+        <div className="bias-group-label">{title}</div>
+        {items.map((w, i) => (
+          <div key={i} className="bias-warning-row">
+            <div className="bw-content">
+              <span className={`bias-dot ${w.severity}`} />
+              <span className="bias-label">{w.label || w.category}</span>
+              {w.matchedText && <span className="bias-matched">"{w.matchedText}"</span>}
+              {w.message    && <span className="bias-msg">{w.message}</span>}
+            </div>
+            <button type="button" className="dismiss-bw" onClick={() => dismiss(w)}>
+              {t('tier1.biasIgnore')}
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="bias-notice">
+        <span className="ico" />
+        <span>{t('tier1.biasFound', { count: visible.length })}</span>
+        <button type="button" onClick={() => setExpanded((e) => !e)}>
+          {expanded ? t('tier1.hideDetails') : t('tier1.showDetails')}
+        </button>
+      </div>
+      {expanded && (
+        <div className="bias-details">
+          {renderGroup(da ? 'Dit input' : 'Your input', visible.filter((w) => w.source === 'input'))}
+          {renderGroup('Variant A', visible.filter((w) => w.source === 'variant_a'))}
+          {renderGroup('Variant B', visible.filter((w) => w.source === 'variant_b'))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function splitToSections(text) {
+  return text.split(/\n\n+/).map((s) => s.trim()).filter(Boolean);
+}
+
+function getBlockTag(text, da) {
+  const txt = text.trim();
+  if (txt.endsWith(':') && txt.length < 60) return da ? 'OVERSKRIFT' : 'HEADING';
+  if (/^[•\-\*]/.test(txt) || /\n[•\-\*]/.test(txt)) return da ? 'LISTE' : 'LIST';
+  return da ? 'AFSNIT' : 'PARAGRAPH';
+}
+
+function SourceCol({ side, label, src, usedKeys, srcPrefix, onAdd, language }) {
+  const { t, i18n } = useTranslation();
+  const da = i18n.language === 'da';
+  return (
+    <div className={`panel-col source ${side}`}>
+      <div className="col-head">
+        <div className="label">
+          <span className={`vchip ${label === 'A' ? 'a' : 'b'}`} />
+          <h2>Variant {label}</h2>
+        </div>
+        <div className="hint">
+          {side === 'left' ? t('tier1.clickToAddRight') : t('tier1.clickToAddLeft')}
+        </div>
+      </div>
+      <div className="col-scroll">
+        {src.map((text, i) => {
+          const k = `${srcPrefix}|${i}`;
+          const used = usedKeys.has(k);
+          return (
+            <div
+              key={i}
+              className={`src-block${used ? ' used' : ''}`}
+              onClick={() => !used && onAdd(text, label, k)}
+              draggable={!used}
+              onDragStart={(e) => { e.dataTransfer.setData('text/plain', k + '\n' + text); }}
+            >
+              <div className="blk-tag">
+                <span>{getBlockTag(text, da)}</span>
+                <span className="added">{da ? 'Tilføjet ✓' : 'Added ✓'}</span>
+              </div>
+              <div className="blk-text">{text}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MixEditor({ variantA, variantB, value, onChange, language }) {
+  const { t, i18n } = useTranslation();
+  const da = i18n.language === 'da';
+  const sectionsA = splitToSections(variantA);
+  const sectionsB = splitToSections(variantB);
+
+  const [doc, setDoc] = useState(() => {
+    if (value?.trim()) {
+      return splitToSections(value).map((text, i) => ({
+        id: `init-${i}`, srcKey: `init-${i}`, text, src: 'A',
+      }));
+    }
+    return [];
+  });
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText]   = useState('');
+
+  const usedKeys = new Set(doc.map((b) => b.srcKey));
+  const words = doc.reduce((n, b) => n + b.text.trim().split(/\s+/).filter(Boolean).length, 0);
+
+  useEffect(() => { onChange(doc.map((b) => b.text).join('\n\n')); }, [doc]);
+
+  function addBlock(text, src, srcKey) {
+    setDoc((d) => [...d, { id: `${Date.now()}-${Math.random()}`, srcKey, text, src }]);
+  }
+  function removeBlock(id) { setDoc((d) => d.filter((b) => b.id !== id)); }
+  function moveBlock(id, dir) {
+    setDoc((d) => {
+      const i = d.findIndex((b) => b.id === id);
+      if (dir === 'up' && i === 0) return d;
+      if (dir === 'down' && i === d.length - 1) return d;
+      const next = [...d];
+      const swap = dir === 'up' ? i - 1 : i + 1;
+      [next[i], next[swap]] = [next[swap], next[i]];
+      return next;
+    });
+  }
+  function startEdit(block) { setEditingId(block.id); setEditText(block.text); }
+  function saveEdit(id) {
+    if (editText.trim()) setDoc((d) => d.map((b) => (b.id === id ? { ...b, text: editText } : b)));
+    else removeBlock(id);
+    setEditingId(null);
+  }
+  function autoResizeMix(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+  function handleDrop(e) {
+    e.preventDefault();
+    const payload = e.dataTransfer.getData('text/plain');
+    if (!payload) return;
+    const [srcKey, ...lines] = payload.split('\n');
+    const text = lines.join('\n');
+    const src = srcKey.startsWith('B') ? 'B' : 'A';
+    if (!usedKeys.has(srcKey)) addBlock(text, src, srcKey);
+  }
+
+  return (
+    <div className="mixer">
+      <SourceCol side="left" label="A" src={sectionsA} usedKeys={usedKeys} srcPrefix="A" onAdd={addBlock} language={language} />
+      <div className="panel-col workspace" onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
+        <div className="ws-head">
+          <div className="ttl">
+            <h2>{t('tier1.wsTitle')}</h2>
+            <span className="meta">{doc.length} {t('tier1.sections')} · {t('tier1.approx')} {words} {t('tier1.words')}</span>
+          </div>
+          <button className="clear" onClick={() => setDoc([])}>{t('tier1.clearAll')}</button>
+        </div>
+        <div className="ws-scroll">
+          <div className={`ws-doc${doc.length === 0 ? ' empty-state' : ''}`}>
+            {doc.length === 0 ? (
+              <div className="ws-empty">
+                <span className="serif">{t('tier1.wsEmpty')}</span>
+                <span className="sm">{t('tier1.wsEmptySub')}</span>
+              </div>
+            ) : (
+              doc.map((block, idx) => (
+                <div key={block.id} className="ws-block" onClick={() => editingId !== block.id && startEdit(block)}>
+                  <div className="wb-bar">
+                    <span className="wb-source">
+                      <span className={`vchip ${block.src === 'A' ? 'a' : 'b'}`} />
+                      Variant {block.src}
+                    </span>
+                    <div className="wb-actions">
+                      <button type="button" title={da ? 'Op' : 'Up'} disabled={idx === 0} onClick={(e) => { e.stopPropagation(); moveBlock(block.id, 'up'); }}>↑</button>
+                      <button type="button" title={da ? 'Ned' : 'Down'} disabled={idx === doc.length - 1} onClick={(e) => { e.stopPropagation(); moveBlock(block.id, 'down'); }}>↓</button>
+                      <button type="button" title={da ? 'Slet' : 'Delete'} onClick={(e) => { e.stopPropagation(); removeBlock(block.id); }}>×</button>
+                    </div>
+                  </div>
+                  {editingId === block.id ? (
+                    <textarea
+                      className="textarea" autoFocus value={editText}
+                      onChange={(e) => { setEditText(e.target.value); autoResizeMix(e.target); }}
+                      onFocus={(e) => autoResizeMix(e.target)}
+                      onBlur={() => saveEdit(block.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ fontFamily: 'var(--serif)', fontSize: 15.5, lineHeight: 1.65, border: 'none', outline: 'none', background: 'transparent', resize: 'vertical', minHeight: 120, width: '100%' }}
+                    />
+                  ) : (
+                    <div className="wb-text">{block.text}</div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+      <SourceCol side="right" label="B" src={sectionsB} usedKeys={usedKeys} srcPrefix="B" onAdd={addBlock} language={language} />
+    </div>
+  );
+}
+
+// ─── Step 7: Job posting generation ──────────────────────────────────────────
+
+function Step7JobPosting({ state, onBack, onComplete, t, project, da }) {
+  const language = state.outputLanguage || 'da';
+  const [subStep, setSubStep]               = useState('completeness');
+  const [variantA, setVariantA]             = useState('');
+  const [variantB, setVariantB]             = useState('');
+  const [biasWarnings, setBiasWarnings]     = useState([]);
+  const [generationBatch, setGenerationBatch] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [finalContent, setFinalContent]     = useState('');
+
+  async function generate(extraBullets = []) {
+    setSubStep('generating');
+    try {
+      const { data } = await api.post('/tier2/generate-job-posting', {
+        project_id:    project.id,
+        extra_bullets: extraBullets,
+      });
+      setVariantA(data.variant_a);
+      setVariantB(data.variant_b);
+      setBiasWarnings(data.bias_warnings || []);
+      setGenerationBatch(data.generation_batch);
+      setSubStep('results');
+    } catch (err) {
+      if (err.response?.status === 422) setSubStep('refused');
+      else setSubStep('completeness');
+    }
+  }
+
+  function selectVariant(v, content) {
+    setSelectedVariant(v);
+    setFinalContent(content);
+    setSubStep('finalize');
+  }
+
+  async function handleSaveAndFinish() {
+    try {
+      await api.post('/tier2/save-step', {
+        project_id:  project.id,
+        step_number: 7,
+        input_data: {
+          selected_variant:  selectedVariant,
+          final_content:     finalContent,
+          generation_batch:  generationBatch,
+        },
+      });
+    } catch { /* non-fatal */ }
+    onComplete();
+  }
+
+  if (subStep === 'completeness') {
+    return (
+      <div className="app s-input">
+        <TopBar active="projects" />
+        <main>
+          <div className="s-completeness">
+            <InputCompletenessCheck
+              jobTitle={state.jobTitle}
+              bullets={(state.bullets || []).filter((b) => b.trim())}
+              location={state.location || ''}
+              workMode={state.workMode || ''}
+              department={state.department || ''}
+              teamComposition={state.teamComposition || ''}
+              language={language}
+              projectId={project.id}
+              onBack={onBack}
+              onProceed={(extras) => generate(extras)}
+              steps={buildSteps(7, t)}
+            />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (subStep === 'generating') {
+    return (
+      <div className="app">
+        <TopBar active="projects" />
+        <main>
+          <div className="work" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 16, textAlign: 'center' }}>
+            <div className="spinner" style={{ width: 36, height: 36 }} />
+            <h2 style={{ margin: 0 }}>{t('tier2.step7Generating')}</h2>
+            <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: 14 }}>{t('tier2.step7GeneratingSub')}</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (subStep === 'refused') {
+    return (
+      <div className="app">
+        <TopBar active="projects" />
+        <main>
+          <div className="work">
+            <section className="intro">
+              <h1>{t('tier2.step7RefusedTitle')}</h1>
+              <p>{t('tier2.step7RefusedBody')}</p>
+              <p style={{ color: 'var(--ink-3)', fontSize: 14 }}>{t('tier2.step7RefusedHint')}</p>
+            </section>
+            <button className="btn btn-secondary" onClick={() => setSubStep('completeness')}>
+              <span className="arrow">←</span> {t('tier2.step7EditBack')}
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (subStep === 'finalize') {
+    const wordCount = finalContent.trim().split(/\s+/).filter(Boolean).length;
+
+    if (selectedVariant === 'mix') {
+      return (
+        <div className="app s-mix">
+          <header className="mix-topbar">
+            <div className="left">
+              <button type="button" className="link-back" onClick={() => setSubStep('results')}>
+                <span className="arrow">←</span>
+              </button>
+              <div className="ttl">
+                {t('tier1.mixTopbarTitle')}
+                <span className="sub">{state.jobTitle}</span>
+              </div>
+            </div>
+            <Steps steps={buildSteps(7, t)} />
+          </header>
+          <MixEditor variantA={variantA} variantB={variantB} value={finalContent} onChange={setFinalContent} language={language} />
+          <footer className="mix-foot">
+            <div className="status">
+              <strong>{t('tier1.wsTitle')}</strong>
+              {' · '}
+              {finalContent.trim().split(/\s+/).filter(Boolean).length} {t('tier1.words')}
+            </div>
+            <div className="actions">
+              <button type="button" className="btn btn-secondary" onClick={() => setSubStep('results')}>
+                {t('tier1.cancel')}
+              </button>
+              <button type="button" className="btn btn-primary" onClick={handleSaveAndFinish} disabled={!finalContent.trim()}>
+                {t('tier2.step7SaveBtn')}
+                <span className="arrow">→</span>
+              </button>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    return (
+      <div className="app s-review">
+        <TopBar active="projects" />
+        <main className="work">
+          <div className="steps-bar"><Steps steps={buildSteps(7, t)} /></div>
+          <section className="review-head" style={{ paddingBottom: 'var(--s-5)' }}>
+            <div className="eyebrow">{t('tier2.step7FinalTitle')}</div>
+            <h1>{state.jobTitle}</h1>
+            <div className="back-link">
+              <button type="button" className="link-back" onClick={() => setSubStep('results')}>
+                <span className="arrow">←</span> {t('tier1.backToVariants')}
+              </button>
+            </div>
+          </section>
+          <div className="edit-section">
+            <div className="field">
+              <label className="field-label">{t('tier1.editBeforeDownload')}</label>
+              <div className="hint" style={{ marginBottom: 'var(--s-3)', fontSize: 13, color: 'var(--ink-3)' }}>
+                {wordCount} {t('tier1.words')} · {t('tier1.editClickHint')}
+              </div>
+              <textarea className="textarea" value={finalContent} onChange={(e) => setFinalContent(e.target.value)} rows={22} />
+            </div>
+          </div>
+          <div className="actionbar">
+            <div className="actionbar-inner">
+              <div className="meta">
+                <span>Variant {selectedVariant} · {language === 'da' ? 'Dansk' : 'English'}</span>
+              </div>
+              <button type="button" className="btn btn-primary btn-lg" onClick={handleSaveAndFinish} disabled={!finalContent.trim()}>
+                {t('tier2.step7SaveBtn')}
+                <span className="arrow">→</span>
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // results sub-step
+  const wordCountA = variantA.trim().split(/\s+/).filter(Boolean).length;
+  const wordCountB = variantB.trim().split(/\s+/).filter(Boolean).length;
+  return (
+    <div className="app s-review">
+      <TopBar active="projects" />
+      <main className="work">
+        <div className="steps-bar"><Steps steps={buildSteps(7, t)} /></div>
+        <section className="review-head">
+          <div className="eyebrow">{t('tier2.step7VariantsTitle')}</div>
+          <h1>{state.jobTitle}</h1>
+          <div className="back-link">
+            <button type="button" className="link-back" onClick={() => setSubStep('completeness')}>
+              <span className="arrow">←</span> {t('tier1.editInputs')}
+            </button>
+          </div>
+        </section>
+
+        {biasWarnings.length > 0 && <BiasPanel warnings={biasWarnings} language={language} />}
+
+        <div className="variants">
+          <div className={`variant${selectedVariant === 'A' ? ' selected' : ''}`}>
+            <div className="v-head">
+              <div className="v-name"><h2>Variant A</h2></div>
+              <span className="wordcount">{wordCountA} {t('tier1.words')}</span>
+            </div>
+            <div className="v-body"><JobPostingPreview content={variantA} /></div>
+            <div className="v-foot">
+              <button type="button" className="btn btn-primary" onClick={() => selectVariant('A', variantA)}>
+                {t('tier2.step7SelectA')}
+              </button>
+            </div>
+          </div>
+          <div className={`variant${selectedVariant === 'B' ? ' selected' : ''}`}>
+            <div className="v-head">
+              <div className="v-name"><h2>Variant B</h2></div>
+              <span className="wordcount">{wordCountB} {t('tier1.words')}</span>
+            </div>
+            <div className="v-body"><JobPostingPreview content={variantB} /></div>
+            <div className="v-foot">
+              <button type="button" className="btn btn-primary" onClick={() => selectVariant('B', variantB)}>
+                {t('tier2.step7SelectB')}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mix-cta">
+          <button type="button" className="btn btn-secondary btn-lg"
+            onClick={() => { setSelectedVariant('mix'); setFinalContent(''); setSubStep('finalize'); }}>
+            {t('tier2.step7MixCta')}
+            <span className="arrow">→</span>
+          </button>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 // ─── Step 6: Behavior patterns ───────────────────────────────────────────────
 
 function Step6Behaviors({ state, setState, onNext, onBack, t, project, da }) {
@@ -979,7 +1468,7 @@ export function Tier2Page({ project }) {
           }
 
           const maxStep = Math.max(...Object.keys(steps).map(Number));
-          if (maxStep >= 1) setAppStep(Math.min(maxStep, 6));
+          if (maxStep >= 1) setAppStep(Math.min(maxStep, 7));
           return next;
         });
       })
@@ -1040,6 +1529,10 @@ export function Tier2Page({ project }) {
   }
 
   async function toStep7() {
+    setAppStep(7);
+  }
+
+  function toComplete() {
     navigate(`/projects/${project.id}/outputs`);
   }
 
@@ -1055,6 +1548,19 @@ export function Tier2Page({ project }) {
   }
 
   const stepProps = { state, setState, t, project, da };
+
+  if (appStep === 7) {
+    return (
+      <Step7JobPosting
+        state={state}
+        onBack={() => setAppStep(6)}
+        onComplete={toComplete}
+        t={t}
+        project={project}
+        da={da}
+      />
+    );
+  }
 
   return (
     <div className="app s-input">

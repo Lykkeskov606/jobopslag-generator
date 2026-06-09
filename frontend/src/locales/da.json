@@ -326,7 +326,21 @@
     "loadError": "Kunne ikke hente projektdata.",
     "step6Title": "Adfærdsmønstre",
     "step6Sub": "5 mønstre er genereret baseret på din rolle- og kandidatanalyse. Vælg de 3–4 der bedst beskriver den ideelle kandidat i praksis.",
-    "step6Generating": "Analyserer rolledata og genererer mønstre…"
+    "step6Generating": "Analyserer rolledata og genererer mønstre…",
+    "step7Title": "Generer jobopslag",
+    "step7Sub": "Gennemse dit grundlag og generer 2 varianter af jobopslaget.",
+    "step7Generating": "Genererer 2 varianter…",
+    "step7GeneratingSub": "Kalder Claude AI · Tager typisk 10–20 sekunder",
+    "step7VariantsTitle": "2 varianter genereret",
+    "step7SelectA": "Vælg Variant A",
+    "step7SelectB": "Vælg Variant B",
+    "step7MixCta": "Mix og tilpas",
+    "step7RefusedTitle": "Indhold kan ikke genereres",
+    "step7RefusedBody": "Dette indhold kan ikke genereres da det strider mod vores retningslinjer.",
+    "step7RefusedHint": "Prøv at omformulere dine input i de tidligere trin.",
+    "step7EditBack": "Rediger input",
+    "step7FinalTitle": "Dit jobopslag",
+    "step7SaveBtn": "Gem og afslut"
   },
   "admin": {
     "title": "Admin-dashboard",

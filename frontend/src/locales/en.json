@@ -146,7 +146,21 @@
     "loadError": "Could not load project data.",
     "step6Title": "Behaviour patterns",
     "step6Sub": "5 patterns have been generated based on your role and candidate analysis. Select the 3–4 that best describe the ideal candidate in practice.",
-    "step6Generating": "Analysing role data and generating patterns…"
+    "step6Generating": "Analysing role data and generating patterns…",
+    "step7Title": "Generate job posting",
+    "step7Sub": "Review your foundation and generate 2 variants of the job posting.",
+    "step7Generating": "Generating 2 variants…",
+    "step7GeneratingSub": "Calling Claude AI · Usually takes 10–20 seconds",
+    "step7VariantsTitle": "2 variants generated",
+    "step7SelectA": "Select Variant A",
+    "step7SelectB": "Select Variant B",
+    "step7MixCta": "Mix & customise",
+    "step7RefusedTitle": "Content cannot be generated",
+    "step7RefusedBody": "This content cannot be generated as it violates our guidelines.",
+    "step7RefusedHint": "Try rephrasing your inputs in the earlier steps.",
+    "step7EditBack": "Edit inputs",
+    "step7FinalTitle": "Your job posting",
+    "step7SaveBtn": "Save and finish"
   },
   "admin": {
     "title": "Admin Dashboard",

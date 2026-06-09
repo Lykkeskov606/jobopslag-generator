@@ -5,8 +5,8 @@ const multer = require('multer');
 const mammoth = require('mammoth');
 const { requireAuth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/rateLimiter');
-const { generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns } = require('../services/claudeService');
-const { runBiasCheck } = require('../services/biasEngine');
+const { generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns, generateJobPosting } = require('../services/claudeService');
+const { runBiasCheck, checkTierC } = require('../services/biasEngine');
 const db = require('../db');
 
 router.use(requireAuth);
@@ -313,6 +313,89 @@ router.post('/save-behaviors', async (req, res, next) => {
     );
 
     res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/tier2/generate-job-posting — generate 2 job posting variants ────
+
+router.post('/generate-job-posting', aiLimiter, async (req, res, next) => {
+  try {
+    const schema = z.object({
+      project_id:    z.string().uuid(),
+      extra_bullets: z.array(z.string().max(300)).max(10).optional().default([]),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
+    const { project_id, extra_bullets } = parsed.data;
+
+    if (!(await isMember(project_id, req.user.id))) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT step_number, input_data FROM project_inputs
+       WHERE project_id = $1 AND step_number IN (1, 2, 3, 4, 5, 6)`,
+      [project_id]
+    );
+    const steps = {};
+    for (const row of rows) steps[row.step_number] = row.input_data;
+
+    const step1 = steps[1] || {};
+    const step2 = steps[2] || {};
+    const step3 = steps[3] || {};
+    const step4 = steps[4] || {};
+    const step5 = steps[5] || {};
+    const step6 = steps[6] || {};
+
+    const jobTitle       = step2.jobTitle || '';
+    const language       = step2.outputLanguage || 'da';
+    const location       = step2.location || '';
+    const startDate      = step2.startDate || '';
+    const employmentType = step2.employmentType || '';
+
+    const baseBullets = (step2.bullets || []).filter((b) => b?.trim());
+    const bullets = [...baseBullets, ...extra_bullets.filter((b) => b?.trim())];
+
+    const templateContent   = step1.templateText || null;
+    const fitCriteria       = step3.fitCriteria || {};
+    const candidateProfile  = step4.requirements || [];
+    const jobAnalysis       = { best: step5.best || '', worst: step5.worst || '', hidden: step5.hidden || '' };
+    const behaviorPatterns  = step6.selected || [];
+
+    const { variant_a, variant_b } = await generateJobPosting({
+      jobTitle, bullets, language,
+      templateContent, templateHtml: null,
+      location, startDate, employmentType,
+      fitCriteria, candidateProfile, jobAnalysis, behaviorPatterns,
+      projectId: project_id, userId: req.user.id,
+    });
+
+    const tierCWarningsA = checkTierC(variant_a, language).map((w) => ({ ...w, source: 'variant_a' }));
+    const tierCWarningsB = checkTierC(variant_b, language).map((w) => ({ ...w, source: 'variant_b' }));
+
+    const batchId = require('crypto').randomUUID();
+    for (const [variant, content] of [['A', variant_a], ['B', variant_b]]) {
+      await db.query(
+        `INSERT INTO project_outputs
+           (project_id, output_type, variant, content, language, ai_model_version, generation_batch)
+         VALUES ($1, 'jobopslag', $2, $3, $4, 'claude-sonnet-4-6', $5)`,
+        [project_id, variant, content, language, batchId]
+      );
+    }
+
+    await db.query(
+      `UPDATE projects SET completion_step = 7, updated_at = NOW() WHERE id = $1`,
+      [project_id]
+    );
+
+    res.json({
+      variant_a,
+      variant_b,
+      bias_warnings: [...tierCWarningsA, ...tierCWarningsB],
+      generation_batch: batchId,
+    });
   } catch (err) {
     next(err);
   }
