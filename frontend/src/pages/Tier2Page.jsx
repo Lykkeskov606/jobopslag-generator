@@ -624,8 +624,9 @@ const JA_QUESTION_TYPES = ['best', 'worst', 'hidden'];
 function Step5JobAnalysis({ state, setState, onNext, onBack, t, project, da }) {
   const language = state.outputLanguage || 'da';
   const [subStep, setSubStep] = useState(1);
-  const [challenge, setChallenge] = useState(null);
-  const [challengeLoading, setChallengeLoading] = useState(false);
+  const [challenge, setChallenge]           = useState(null);
+  const [challengeAccepted, setChallengeAccepted] = useState(false);
+  const [challengeLoading, setChallengeLoading]   = useState(false);
   useScrollAnchor(challenge ? 1 : 0);
   const challengeTimer = useRef(null);
 
@@ -633,10 +634,16 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project, da }) {
   const answerKey = `ja_${qType}`;
   const answer = state[answerKey] || '';
 
-  useEffect(() => {
+  function clearChallenge() {
     setChallenge(null);
+    setChallengeAccepted(false);
+  }
+
+  useEffect(() => {
+    if (!challengeAccepted) setChallenge(null);
     clearTimeout(challengeTimer.current);
     if (answer.trim().length < 25) return;
+    if (challengeAccepted) return;
     challengeTimer.current = setTimeout(async () => {
       setChallengeLoading(true);
       try {
@@ -658,7 +665,7 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project, da }) {
   }, [answer, qType]);
 
   useEffect(() => {
-    setChallenge(null);
+    clearChallenge();
     clearTimeout(challengeTimer.current);
   }, [subStep]);
 
@@ -680,7 +687,7 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project, da }) {
     localStorage.removeItem(draftKey(project.id));
     setState((s) => ({ ...s, ja_best: '', ja_worst: '', ja_hidden: '' }));
     setSubStep(1);
-    setChallenge(null);
+    clearChallenge();
   }
 
   return (
@@ -724,19 +731,28 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project, da }) {
             <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--accent)', marginBottom: 8 }}>
               {t('tier2.challengeTitle')}
             </div>
-            <p style={{ margin: '0 0 8px', fontSize: 14 }}>{challenge.challenge}</p>
+            {!challengeAccepted && (
+              <p style={{ margin: '0 0 8px', fontSize: 14 }}>{challenge.challenge}</p>
+            )}
             {challenge.probe && (
-              <p style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--ink-2)', fontStyle: 'italic' }}>
+              <p style={{ margin: `0 0 ${challengeAccepted ? 12 : 16}px`, fontSize: 14, color: 'var(--ink-2)', fontStyle: 'italic' }}>
                 {challenge.probe}
               </p>
             )}
+            {challengeAccepted && (
+              <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--accent)' }}>
+                {da ? '✎ Uddyb dit svar i feltet ovenfor' : '✎ Elaborate in the field above'}
+              </p>
+            )}
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-secondary" style={{ fontSize: 13 }} onClick={() => setChallenge(null)}>
+              <button className="btn btn-secondary" style={{ fontSize: 13 }} onClick={clearChallenge}>
                 {t('tier2.challengeDismiss')}
               </button>
-              <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={() => setChallenge(null)}>
-                {t('tier2.challengeAccept')}
-              </button>
+              {!challengeAccepted && (
+                <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={() => setChallengeAccepted(true)}>
+                  {t('tier2.challengeAccept')}
+                </button>
+              )}
             </div>
           </div>
         )}
