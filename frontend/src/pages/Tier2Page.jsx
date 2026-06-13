@@ -252,8 +252,9 @@ function Step2Info({ state, setState, onNext, onBack, t, project }) {
           language={language}
           projectId={project.id}
           onBack={() => setSubStep('form')}
-          onProceed={(_, { skippedIds = [] } = {}) => onNext(skippedIds)}
+          onProceed={(_, { skippedIds = [], filledIds = [] } = {}) => onNext([...skippedIds, ...filledIds])}
           steps={buildSteps(2, t)}
+          showStepEyebrow={false}
         />
       </div>
     );
@@ -1096,11 +1097,12 @@ function Step7JobPosting({ state, onBack, onComplete, onSkipCompleteness, t, pro
               language={language}
               projectId={project.id}
               onBack={onBack}
-              onProceed={(extras, { skippedIds = [] } = {}) => generate(extras, skippedIds)}
+              onProceed={(extras, { skippedIds = [], filledIds = [] } = {}) => generate(extras, [...skippedIds, ...filledIds])}
               steps={buildSteps(7, t)}
               excludeIds={state.completenessSkipped || []}
               titleOverride={step7Missing.length > 0 ? t('tier2.step7LastChanceTitle') : null}
               subtitleOverride={step7Missing.length > 0 ? t('tier2.step7LastChanceSub', { count: step7Missing.length }) : null}
+              showStepEyebrow={false}
             />
           </div>
         </main>

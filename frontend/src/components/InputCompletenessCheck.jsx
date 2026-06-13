@@ -23,6 +23,7 @@ export function InputCompletenessCheck({
   excludeIds = [],
   titleOverride = null,
   subtitleOverride = null,
+  showStepEyebrow = true,
 }) {
   const { t, i18n } = useTranslation();
   const lang = language === 'en' ? 'en' : 'da';
@@ -83,7 +84,8 @@ export function InputCompletenessCheck({
       const label = check?.label[lang] ?? id;
       return `${label}: ${text.trim()}`;
     });
-    onProceed(extraBullets, { skippedIds: [...skipped] });
+    const filledIds = filledNotes.map(([id]) => id);
+    onProceed(extraBullets, { skippedIds: [...skipped], filledIds });
   }
 
   const progressPct = missing.length > 0
@@ -123,7 +125,7 @@ export function InputCompletenessCheck({
 
       {/* Intro */}
       <section className="intro">
-        <div className="eyebrow">{t('completeness.step')}</div>
+        {showStepEyebrow && <div className="eyebrow">{t('completeness.step')}</div>}
         {missing.length === 0 ? (
           <>
             <h1>{titleOverride ?? t('completeness.allClear')}</h1>
