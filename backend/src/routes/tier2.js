@@ -3,10 +3,12 @@ const router = express.Router();
 const { z } = require('zod');
 const multer = require('multer');
 const mammoth = require('mammoth');
+const archiver = require('archiver');
 const { requireAuth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/rateLimiter');
 const { generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns, generateJobPosting, generateCandidateProfile, generateInterviewGuide } = require('../services/claudeService');
 const { runBiasCheck, checkTierC } = require('../services/biasEngine');
+const { buildDocxBuffer } = require('../utils/docxBuilder');
 const db = require('../db');
 
 router.use(requireAuth);
@@ -408,6 +410,70 @@ router.post('/generate-job-posting', aiLimiter, async (req, res, next) => {
   }
 });
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function safeFilename(s) {
+  return s.replace(/[^\w\sæøåÆØÅ-]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function formatJobAnalysis(best, worst, hidden, isDa) {
+  const lines = [];
+  if (best)   { lines.push(isDa ? 'Den bedste i rollen:' : 'Best in the role:', best, ''); }
+  if (worst)  { lines.push(isDa ? 'Den dårligste i rollen:' : 'Worst in the role:', worst, ''); }
+  if (hidden) { lines.push(isDa ? 'Det skjulte krav:' : 'The hidden requirement:', hidden, ''); }
+  return lines.join('\n');
+}
+
+function formatInterviewGuide(guide, isDa) {
+  const lines = [];
+  guide.forEach((item, idx) => {
+    lines.push(`${isDa ? 'Spørgsmål' : 'Question'} ${idx + 1}: ${item.pattern_title}`);
+    lines.push('');
+    lines.push(`${isDa ? 'Interviewspørgsmål' : 'Interview question'}:`);
+    lines.push(item.question);
+    lines.push('');
+    lines.push(`${isDa ? 'Follow-up probe' : 'Follow-up probe'}:`);
+    lines.push(item.probe);
+    lines.push('');
+    lines.push(`${isDa ? 'Scoring-rubrik' : 'Scoring rubric'}:`);
+    lines.push(`${isDa ? 'Niveau' : 'Level'} 1 — ${isDa ? 'Utilstrækkeligt' : 'Insufficient'}: ${item.rubric?.['1'] || ''}`);
+    lines.push(`${isDa ? 'Niveau' : 'Level'} 2 — ${isDa ? 'Under forventning' : 'Below expectation'}: ${item.rubric?.['2'] || ''}`);
+    lines.push(`${isDa ? 'Niveau' : 'Level'} 3 — ${isDa ? 'Opfylder forventning' : 'Meets expectation'}: ${item.rubric?.['3'] || ''}`);
+    lines.push(`${isDa ? 'Niveau' : 'Level'} 4 — ${isDa ? 'Overtrumfer' : 'Exceeds expectation'}: ${item.rubric?.['4'] || ''}`);
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+  });
+  return lines.join('\n');
+}
+
+async function fetchAllDocData(projectId) {
+  const { rows: inputRows } = await db.query(
+    `SELECT step_number, input_data FROM project_inputs
+     WHERE project_id = $1 AND step_number IN (2, 5, 7)`,
+    [projectId]
+  );
+  const steps = {};
+  for (const row of inputRows) steps[row.step_number] = row.input_data;
+
+  const { rows: outputRows } = await db.query(
+    `SELECT DISTINCT ON (output_type) output_type, content, language
+     FROM project_outputs
+     WHERE project_id = $1 AND output_type IN ('jobopslag', 'candidate_profile', 'interview_guide')
+     ORDER BY output_type, generated_at DESC`,
+    [projectId]
+  );
+  const outputs = {};
+  for (const row of outputRows) outputs[row.output_type] = row;
+
+  const { rows: projRows } = await db.query(
+    `SELECT name FROM projects WHERE id = $1`,
+    [projectId]
+  );
+
+  return { steps, outputs, projectName: projRows[0]?.name || 'Rekrutteringsprojekt' };
+}
+
 // ── POST /api/tier2/generate-candidate-profile ────────────────────────────────
 
 router.post('/generate-candidate-profile', aiLimiter, async (req, res, next) => {
@@ -521,6 +587,111 @@ router.post('/generate-interview-guide', aiLimiter, async (req, res, next) => {
     );
 
     res.json({ guide });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── GET /api/tier2/export/:projectId/zip — all 4 docs as ZIP ─────────────────
+
+router.get('/export/:projectId/zip', async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    if (!(await isMember(projectId, req.user.id))) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const { steps, outputs, projectName } = await fetchAllDocData(projectId);
+    const step2 = steps[2] || {};
+    const step5 = steps[5] || {};
+    const step7 = steps[7] || {};
+    const language = step2.outputLanguage || 'da';
+    const isDa = language === 'da';
+    const base = safeFilename(projectName);
+
+    const jobPostingContent = step7.final_content || outputs['jobopslag']?.content || '';
+    const candidateProfileContent = outputs['candidate_profile']?.content || '';
+    const rawGuide = outputs['interview_guide']?.content || '[]';
+    let guideItems = [];
+    try { guideItems = JSON.parse(rawGuide); } catch {}
+    const interviewGuideContent = formatInterviewGuide(guideItems, isDa);
+
+    const docs = [
+      { title: isDa ? `${projectName} — Jobanalyse` : `${projectName} — Job Analysis`,      content: formatJobAnalysis(step5.best, step5.worst, step5.hidden, isDa),  file: `${base} - ${isDa ? 'Jobanalyse' : 'Job Analysis'}.docx` },
+      { title: isDa ? `${projectName} — Jobopslag`  : `${projectName} — Job Posting`,        content: jobPostingContent,                                                file: `${base} - ${isDa ? 'Jobopslag' : 'Job Posting'}.docx` },
+      { title: isDa ? `${projectName} — Kandidatprofil` : `${projectName} — Candidate Profile`, content: candidateProfileContent,                                      file: `${base} - ${isDa ? 'Kandidatprofil' : 'Candidate Profile'}.docx` },
+      { title: isDa ? `${projectName} — Interviewguide` : `${projectName} — Interview Guide`,   content: interviewGuideContent,                                        file: `${base} - ${isDa ? 'Interviewguide' : 'Interview Guide'}.docx` },
+    ];
+
+    const zipName = `${base} - ${isDa ? 'Rekrutteringsprojekt' : 'Recruitment Project'}.zip`;
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
+
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.on('error', (err) => next(err));
+    archive.pipe(res);
+
+    for (const doc of docs) {
+      if (!doc.content) continue;
+      const buf = await buildDocxBuffer(doc.title, doc.content);
+      archive.append(buf, { name: doc.file });
+    }
+
+    await archive.finalize();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── GET /api/tier2/export/:projectId/:docType — individual doc download ───────
+
+router.get('/export/:projectId/:docType', async (req, res, next) => {
+  try {
+    const { projectId, docType } = req.params;
+    const validTypes = ['job-analysis', 'job-posting', 'candidate-profile', 'interview-guide'];
+    if (!validTypes.includes(docType)) return res.status(400).json({ error: 'Invalid docType' });
+
+    if (!(await isMember(projectId, req.user.id))) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const { steps, outputs, projectName } = await fetchAllDocData(projectId);
+    const step2 = steps[2] || {};
+    const step5 = steps[5] || {};
+    const step7 = steps[7] || {};
+    const language = step2.outputLanguage || 'da';
+    const isDa = language === 'da';
+    const base = safeFilename(projectName);
+
+    let docTitle, content, filename;
+
+    if (docType === 'job-analysis') {
+      docTitle = isDa ? `${projectName} — Jobanalyse` : `${projectName} — Job Analysis`;
+      content  = formatJobAnalysis(step5.best, step5.worst, step5.hidden, isDa);
+      filename = `${base} - ${isDa ? 'Jobanalyse' : 'Job Analysis'}.docx`;
+    } else if (docType === 'job-posting') {
+      docTitle = isDa ? `${projectName} — Jobopslag` : `${projectName} — Job Posting`;
+      content  = step7.final_content || outputs['jobopslag']?.content || '';
+      filename = `${base} - ${isDa ? 'Jobopslag' : 'Job Posting'}.docx`;
+    } else if (docType === 'candidate-profile') {
+      docTitle = isDa ? `${projectName} — Kandidatprofil` : `${projectName} — Candidate Profile`;
+      content  = outputs['candidate_profile']?.content || '';
+      filename = `${base} - ${isDa ? 'Kandidatprofil' : 'Candidate Profile'}.docx`;
+    } else {
+      const rawGuide = outputs['interview_guide']?.content || '[]';
+      let guideItems = [];
+      try { guideItems = JSON.parse(rawGuide); } catch {}
+      docTitle = isDa ? `${projectName} — Interviewguide` : `${projectName} — Interview Guide`;
+      content  = formatInterviewGuide(guideItems, isDa);
+      filename = `${base} - ${isDa ? 'Interviewguide' : 'Interview Guide'}.docx`;
+    }
+
+    if (!content) return res.status(404).json({ error: 'Document not yet generated' });
+
+    const buffer = await buildDocxBuffer(docTitle, content);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
   } catch (err) {
     next(err);
   }

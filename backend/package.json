@@ -16,6 +16,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
     "@sentry/node": "^10.55.0",
+    "archiver": "^8.0.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.77.6",
     "cors": "^2.8.6",

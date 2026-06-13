@@ -1827,6 +1827,136 @@ function Step8GenerateOutputs({ state, project, onBack, onComplete, t, da }) {
   );
 }
 
+// ─── Step 9: Download ────────────────────────────────────────────────────────
+
+function Step9Download({ project, onBack, onFinish, t, da }) {
+  const [downloading, setDownloading] = useState(null);
+  const [errors, setErrors]           = useState({});
+
+  const docs = [
+    { key: 'job-analysis',      label: t('tier2.step9DocJobAnalysis'),      sub: t('tier2.step9DocJobAnalysisSub') },
+    { key: 'job-posting',       label: t('tier2.step9DocJobPosting'),        sub: t('tier2.step9DocJobPostingSub') },
+    { key: 'candidate-profile', label: t('tier2.step9DocCandidateProfile'), sub: t('tier2.step9DocCandidateProfileSub') },
+    { key: 'interview-guide',   label: t('tier2.step9DocInterviewGuide'),   sub: t('tier2.step9DocInterviewGuideSub') },
+  ];
+
+  function triggerDownload(url, fallbackFilename) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fallbackFilename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+  }
+
+  async function downloadDoc(docType) {
+    setDownloading(docType);
+    setErrors((e) => ({ ...e, [docType]: null }));
+    try {
+      const response = await api.get(`/tier2/export/${project.id}/${docType}`, { responseType: 'blob' });
+      const cd = response.headers['content-disposition'] || '';
+      const match = cd.match(/filename="(.+?)"/);
+      const filename = match ? match[1] : `${docType}.docx`;
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      triggerDownload(url, filename);
+    } catch {
+      setErrors((e) => ({ ...e, [docType]: da ? 'Fejl — prøv igen.' : 'Error — please try again.' }));
+    } finally {
+      setDownloading(null);
+    }
+  }
+
+  async function downloadZip() {
+    setDownloading('zip');
+    setErrors((e) => ({ ...e, zip: null }));
+    try {
+      const response = await api.get(`/tier2/export/${project.id}/zip`, { responseType: 'blob' });
+      const cd = response.headers['content-disposition'] || '';
+      const match = cd.match(/filename="(.+?)"/);
+      const filename = match ? match[1] : 'rekrutteringsprojekt.zip';
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      triggerDownload(url, filename);
+    } catch {
+      setErrors((e) => ({ ...e, zip: da ? 'Fejl — prøv igen.' : 'Error — please try again.' }));
+    } finally {
+      setDownloading(null);
+    }
+  }
+
+  const cardStyle = {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    background: 'var(--surface)', border: '1px solid var(--border)',
+    borderRadius: 8, padding: '16px 20px', marginBottom: 12,
+  };
+
+  return (
+    <div className="app s-review">
+      <TopBar active="projects" />
+      <main className="work">
+        <div className="steps-bar"><Steps steps={buildSteps(9, t)} /></div>
+
+        <section className="review-head" style={{ textAlign: 'center', paddingBottom: 'var(--s-5)' }}>
+          <div className="eyebrow" style={{ color: 'var(--accent)', fontWeight: 700 }}>✓ {t('tier2.step9Complete')}</div>
+          <h1 style={{ marginBottom: 8 }}>{t('tier2.step9Title')}</h1>
+          <p style={{ margin: 0, color: 'var(--ink-2)' }}>{t('tier2.step9Sub')}</p>
+        </section>
+
+        <div style={{ marginBottom: 32 }}>
+          {docs.map((doc) => (
+            <div key={doc.key} style={cardStyle}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 2 }}>{doc.label}</div>
+                <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>{doc.sub}</div>
+                {errors[doc.key] && <div style={{ fontSize: 13, color: 'var(--error, #c0392b)', marginTop: 4 }}>{errors[doc.key]}</div>}
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ whiteSpace: 'nowrap', minWidth: 100 }}
+                onClick={() => downloadDoc(doc.key)}
+                disabled={!!downloading}
+              >
+                {downloading === doc.key ? t('tier2.step9Downloading') : t('tier2.step9DownloadBtn')}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div style={{
+          background: 'var(--accent-soft, #f0f4ff)',
+          border: '1px solid var(--accent-border, #c7d7fb)',
+          borderRadius: 10, padding: '20px 24px', marginBottom: 32, textAlign: 'center',
+        }}>
+          <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>{t('tier2.step9ZipBtn')}</div>
+          <div style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 16 }}>{t('tier2.step9ZipSub')}</div>
+          {errors.zip && <div style={{ fontSize: 13, color: 'var(--error, #c0392b)', marginBottom: 8 }}>{errors.zip}</div>}
+          <button
+            type="button"
+            className="btn btn-primary btn-lg"
+            onClick={downloadZip}
+            disabled={!!downloading}
+          >
+            {downloading === 'zip' ? t('tier2.step9Downloading') : t('tier2.step9ZipBtn')}
+          </button>
+        </div>
+
+        <div className="actionbar">
+          <div className="actionbar-inner">
+            <button type="button" className="link-back" onClick={onBack}>
+              <span className="arrow">←</span> {t('tier2.back')}
+            </button>
+            <button type="button" className="btn btn-primary btn-lg" onClick={onFinish}>
+              {t('tier2.step9Finish')}
+              <span className="arrow">→</span>
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 // ─── Tier2Page — orchestrator ─────────────────────────────────────────────────
 
 export function Tier2Page({ project }) {
@@ -2009,13 +2139,25 @@ export function Tier2Page({ project }) {
 
   const stepProps = { state, setState, t, project, da };
 
+  if (appStep === 9) {
+    return (
+      <Step9Download
+        project={project}
+        onBack={() => setAppStep(8)}
+        onFinish={() => navigate(`/projects/${project.id}/outputs`)}
+        t={t}
+        da={da}
+      />
+    );
+  }
+
   if (appStep === 8) {
     return (
       <Step8GenerateOutputs
         state={state}
         project={project}
         onBack={() => setAppStep(7)}
-        onComplete={() => navigate(`/projects/${project.id}/outputs`)}
+        onComplete={() => setAppStep(9)}
         t={t}
         da={da}
       />
