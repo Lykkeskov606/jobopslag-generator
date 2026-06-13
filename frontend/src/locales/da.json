@@ -359,7 +359,17 @@
     "step8GeneratingProfileSub": "Kalder Claude AI · Tager typisk 10–20 sekunder",
     "step8ProfileReady": "Kandidatprofil genereret",
     "step8Regenerate": "Generér igen",
-    "step8ErrorProfile": "Kunne ikke generere kandidatprofil — prøv igen."
+    "step8ErrorProfile": "Kunne ikke generere kandidatprofil — prøv igen.",
+    "step8GuideTitle": "Interviewguide",
+    "step8GuideSub": "STAR-baserede spørgsmål med 4-niveau scoring for hvert adfærdsmønster.",
+    "step8GeneratingGuide": "Genererer interviewguide…",
+    "step8GeneratingGuideSub": "Kalder Claude AI · Tager typisk 10–20 sekunder",
+    "step8GuideReady": "Interviewguide genereret",
+    "step8ErrorGuide": "Kunne ikke generere interviewguide — prøv igen.",
+    "step8GuideQuestion": "Spørgsmål",
+    "step8GuideProbe": "Follow-up probe",
+    "step8GuideRubric": "Scoring-rubrik",
+    "step8GuideRubricLevel": "Niveau {{n}}"
   },
   "admin": {
     "title": "Admin-dashboard",

@@ -640,4 +640,54 @@ async function generateCandidateProfile({
   return text.trim();
 }
 
-module.exports = { generateJobPosting, generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns, generateCandidateProfile };
+// ── Tier 2: interview guide ───────────────────────────────────────────────────
+
+async function generateInterviewGuide({
+  behaviorPatterns, candidateProfile, language, projectId, userId,
+}) {
+  const promptFile = `interviewguide-${language}.txt`;
+  const template = readPrompt(promptFile);
+  const isDa = language === 'da';
+  const noInfo = isDa ? '(ikke angivet)' : '(not specified)';
+
+  const patternLines = Array.isArray(behaviorPatterns) && behaviorPatterns.length
+    ? behaviorPatterns.map((p) => `• ${p.title}: ${p.description}`)
+    : [noInfo];
+  const patternsText = patternLines.join('\n');
+
+  const profileBullets = Array.isArray(candidateProfile) ? candidateProfile.filter((b) => b?.trim()) : [];
+  const profileText = profileBullets.length ? profileBullets.map((b) => `• ${b}`).join('\n') : noInfo;
+
+  const sharedRules = readSharedRules(language);
+
+  const prompt = fillTemplate(template, {
+    selected_behavior_patterns: patternsText,
+    candidate_profile_bullets:  profileText,
+    shared_content_rules:       sharedRules,
+  });
+
+  const text = await callClaude(prompt, promptFile, projectId, userId, 8);
+
+  const cleaned = text.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Invalid interview guide response');
+
+  const parsed = JSON.parse(jsonMatch[0]);
+  if (!Array.isArray(parsed.guide) || parsed.guide.length < 1) {
+    throw new Error('Expected interview guide array');
+  }
+
+  return parsed.guide.map((item) => ({
+    pattern_title: String(item.pattern_title || ''),
+    question:      String(item.question || ''),
+    probe:         String(item.probe || ''),
+    rubric: {
+      '1': String(item.rubric?.['1'] || ''),
+      '2': String(item.rubric?.['2'] || ''),
+      '3': String(item.rubric?.['3'] || ''),
+      '4': String(item.rubric?.['4'] || ''),
+    },
+  }));
+}
+
+module.exports = { generateJobPosting, generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns, generateCandidateProfile, generateInterviewGuide };

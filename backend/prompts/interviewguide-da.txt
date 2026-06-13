@@ -1,0 +1,40 @@
+Du er ekspert i adfærdsbaseret interviewmetodik og STAR-baserede spørgsmål.
+
+VALGTE ADFÆRDSMØNSTRE:
+{{selected_behavior_patterns}}
+
+KANDIDATPROFIL (krav og dimensioner):
+{{candidate_profile_bullets}}
+
+{{shared_content_rules}}
+
+OPGAVE:
+Generer en struktureret interviewguide med STAR-baserede spørgsmål for hvert adfærdsmønster. Guiden bruges af interviewpanelet til at vurdere kandidater systematisk og konsistent.
+
+For hvert adfærdsmønster skal du generere:
+1. Et åbent STAR-baseret interviewspørgsmål der afdækker adfærden direkte. Brug formlen "Fortæl mig om..." eller "Beskriv en situation...". Undgå hypotetiske spørgsmål ("hvad ville du gøre hvis...").
+2. Et follow-up probe-spørgsmål der borer dybere hvis svaret er overfladeagtigt. Eks: "Hvad var præcis din rolle i det?" / "Hvad gjorde du konkret da det gik galt?"
+3. En 4-niveau scoring-rubrik der definerer hvad et 1-, 2-, 3- og 4-svar ser ud som for DETTE specifikke mønster:
+   - 1 (Utilstrækkeligt): Hvad et svagt svar mangler
+   - 2 (Under forventning): Hvad et gennemsnitligt, men utilstrækkeligt svar ser ud som
+   - 3 (Opfylder forventning): Hvad et tilfredsstillende svar inkluderer
+   - 4 (Overtrumfer): Hvad et exceptionelt svar demonstrerer
+
+Rubrik-kriterierne skal være rolle-specifikke og adfærdsorienterede — ikke generiske.
+
+Return KUN dette JSON-objekt — ingen forklaring, ingen markdown, ingen tekst udenfor JSON:
+{
+  "guide": [
+    {
+      "pattern_title": "...",
+      "question": "...",
+      "probe": "...",
+      "rubric": {
+        "1": "...",
+        "2": "...",
+        "3": "...",
+        "4": "..."
+      }
+    }
+  ]
+}

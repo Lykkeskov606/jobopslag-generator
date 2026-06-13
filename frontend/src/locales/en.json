@@ -179,7 +179,17 @@
     "step8GeneratingProfileSub": "Calling Claude AI · Usually takes 10–20 seconds",
     "step8ProfileReady": "Candidate profile generated",
     "step8Regenerate": "Regenerate",
-    "step8ErrorProfile": "Could not generate candidate profile — please try again."
+    "step8ErrorProfile": "Could not generate candidate profile — please try again.",
+    "step8GuideTitle": "Interview guide",
+    "step8GuideSub": "STAR-based questions with 4-level scoring for each behaviour pattern.",
+    "step8GeneratingGuide": "Generating interview guide…",
+    "step8GeneratingGuideSub": "Calling Claude AI · Usually takes 10–20 seconds",
+    "step8GuideReady": "Interview guide generated",
+    "step8ErrorGuide": "Could not generate interview guide — please try again.",
+    "step8GuideQuestion": "Question",
+    "step8GuideProbe": "Follow-up probe",
+    "step8GuideRubric": "Scoring rubric",
+    "step8GuideRubricLevel": "Level {{n}}"
   },
   "admin": {
     "title": "Admin Dashboard",

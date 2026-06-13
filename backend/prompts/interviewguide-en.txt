@@ -1,0 +1,40 @@
+You are an expert in behavioural interview methodology and STAR-based questioning.
+
+SELECTED BEHAVIOUR PATTERNS:
+{{selected_behavior_patterns}}
+
+CANDIDATE PROFILE (requirements and dimensions):
+{{candidate_profile_bullets}}
+
+{{shared_content_rules}}
+
+TASK:
+Generate a structured interview guide with STAR-based questions for each behaviour pattern. The guide is used by the interview panel to assess candidates systematically and consistently.
+
+For each behaviour pattern generate:
+1. An open STAR-based interview question that directly elicits the behaviour. Use the formula "Tell me about a time..." or "Describe a situation...". Avoid hypothetical questions ("what would you do if...").
+2. A follow-up probe question to dig deeper if the answer is superficial. E.g.: "What was specifically your role in that?" / "What did you actually do when it went wrong?"
+3. A 4-level scoring rubric defining what a 1, 2, 3, and 4 answer looks like for THIS specific pattern:
+   - 1 (Insufficient): What a weak answer lacks
+   - 2 (Below expectation): What an average but insufficient answer looks like
+   - 3 (Meets expectation): What a satisfactory answer includes
+   - 4 (Exceeds expectation): What an exceptional answer demonstrates
+
+Rubric criteria must be role-specific and behaviour-oriented — not generic.
+
+Return ONLY this JSON object — no explanation, no markdown, no text outside JSON:
+{
+  "guide": [
+    {
+      "pattern_title": "...",
+      "question": "...",
+      "probe": "...",
+      "rubric": {
+        "1": "...",
+        "2": "...",
+        "3": "...",
+        "4": "..."
+      }
+    }
+  ]
+}

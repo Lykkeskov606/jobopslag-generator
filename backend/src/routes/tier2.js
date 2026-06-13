@@ -5,7 +5,7 @@ const multer = require('multer');
 const mammoth = require('mammoth');
 const { requireAuth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/rateLimiter');
-const { generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns, generateJobPosting, generateCandidateProfile } = require('../services/claudeService');
+const { generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns, generateJobPosting, generateCandidateProfile, generateInterviewGuide } = require('../services/claudeService');
 const { runBiasCheck, checkTierC } = require('../services/biasEngine');
 const db = require('../db');
 
@@ -469,6 +469,58 @@ router.post('/generate-candidate-profile', aiLimiter, async (req, res, next) => 
     );
 
     res.json({ content });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/tier2/generate-interview-guide ──────────────────────────────────
+
+router.post('/generate-interview-guide', aiLimiter, async (req, res, next) => {
+  try {
+    const schema = z.object({ project_id: z.string().uuid() });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
+    const { project_id } = parsed.data;
+
+    if (!(await isMember(project_id, req.user.id))) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const { rows: inputRows } = await db.query(
+      `SELECT step_number, input_data FROM project_inputs
+       WHERE project_id = $1 AND step_number IN (4, 6)`,
+      [project_id]
+    );
+    const steps = {};
+    for (const row of inputRows) steps[row.step_number] = row.input_data;
+
+    const step2Row = await db.query(
+      `SELECT input_data FROM project_inputs WHERE project_id = $1 AND step_number = 2`,
+      [project_id]
+    );
+    const language = step2Row.rows[0]?.input_data?.outputLanguage || 'da';
+
+    const step4 = steps[4] || {};
+    const step6 = steps[6] || {};
+
+    const guide = await generateInterviewGuide({
+      behaviorPatterns: step6.selected || [],
+      candidateProfile: step4.requirements || [],
+      language,
+      projectId:        project_id,
+      userId:           req.user.id,
+    });
+
+    const content = JSON.stringify(guide);
+    await db.query(
+      `INSERT INTO project_outputs
+         (project_id, output_type, variant, content, language, ai_model_version)
+       VALUES ($1, 'interview_guide', 'A', $2, $3, 'claude-sonnet-4-6')`,
+      [project_id, content, language]
+    );
+
+    res.json({ guide });
   } catch (err) {
     next(err);
   }
