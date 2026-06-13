@@ -10,7 +10,12 @@ JOBANALYSE (bedste/dårligste/skjulte krav):
 {{job_analysis}}
 
 OPGAVE:
-Generer præcis 5 adfærdsmønstre der adskiller de bedste medarbejdere i denne specifikke rolle fra middelmådige.
+Generér mellem 5 og 8 adfærdsmønstre der adskiller de bedste medarbejdere i denne specifikke rolle fra middelmådige.
+
+Regler for antal:
+• Sparsomt input (korte svar, få fit-kriterier): generér 5
+• Rigt input (fyldige svar, mange specifikke detaljer): generér 6-8
+• Færre mønstre er bedre end opfundne — generér KUN mønstre der har klart grundlag i brugerens input
 
 Hvert mønster skal:
 • Beskrive konkrete, observerbare HANDLINGER — ikke personlighedstræk som "proaktiv" eller "struktureret"
@@ -23,4 +28,4 @@ Selvvalider hvert mønster: "Kan jeg observere dette i en samtale eller se det i
 ALDRIG brug: "proaktiv", "kommunikerer klart", "er struktureret", "er løsningsorienteret", "er selvstændig" som titler — disse er egenskaber, ikke adfærd.
 
 Return KUN dette JSON-objekt — ingen forklaring, ingen markdown, ingen tekst udenfor JSON:
-{"patterns":[{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."}]}
+{"patterns":[{"title":"...","description":"..."}]}

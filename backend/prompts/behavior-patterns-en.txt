@@ -10,7 +10,12 @@ JOB ANALYSIS (best/worst/hidden requirements):
 {{job_analysis}}
 
 TASK:
-Generate exactly 5 behaviour patterns that distinguish the best employees in this specific role from mediocre ones.
+Generate between 5 and 8 behaviour patterns that distinguish the best employees in this specific role from mediocre ones.
+
+Rules for count:
+• Sparse input (short answers, few fit criteria): generate 5
+• Rich input (detailed answers, many specific details): generate 6-8
+• Fewer patterns are better than invented ones — only generate patterns with a clear basis in the user's input
 
 Each pattern must:
 • Describe concrete, observable ACTIONS — not personality traits like "proactive" or "structured"
@@ -23,4 +28,4 @@ Self-validate each pattern: "Can I observe this in an interview or see it in con
 NEVER use: "communicates clearly", "is proactive", "is structured", "is solution-oriented", "works independently" as titles — these are traits, not behaviours.
 
 Return ONLY this JSON object — no explanation, no markdown, no text outside the JSON:
-{"patterns":[{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."}]}
+{"patterns":[{"title":"...","description":"..."}]}

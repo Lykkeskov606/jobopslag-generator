@@ -1254,16 +1254,35 @@ function Step6Behaviors({ state, setState, onNext, onBack, t, project, da }) {
   const language = state.outputLanguage || 'da';
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState({ title: '', description: '' });
 
   const patterns = state.behaviorPatterns || [];
   const selected = state.selectedBehaviors || [];
+  const userPatterns = patterns.filter((p) => p.source === 'user');
+  const canAddCustom = userPatterns.length < 2;
 
   async function generate() {
     setGenerating(true);
     setGenError(null);
     try {
       const { data } = await api.post('/tier2/generate-behaviors', { project_id: project.id, language });
-      setState((s) => ({ ...s, behaviorPatterns: data.patterns, selectedBehaviors: [] }));
+      const newAiPatterns = data.patterns.map((p, i) => ({
+        id: `ai-${Date.now()}-${i}`,
+        source: 'ai',
+        title: p.title,
+        description: p.description,
+        edited: false,
+      }));
+      setState((s) => {
+        const existingUserPatterns = (s.behaviorPatterns || []).filter((p) => p.source === 'user');
+        const userSelectedStill = (s.selectedBehaviors || []).filter((p) => p.source === 'user');
+        return {
+          ...s,
+          behaviorPatterns: [...newAiPatterns, ...existingUserPatterns],
+          selectedBehaviors: userSelectedStill,
+        };
+      });
     } catch {
       setGenError(da ? 'Kunne ikke generere mønstre — prøv igen.' : 'Could not generate patterns — please try again.');
     } finally {
@@ -1272,17 +1291,75 @@ function Step6Behaviors({ state, setState, onNext, onBack, t, project, da }) {
   }
 
   useEffect(() => {
-    if (patterns.length !== 5) generate();
+    const aiCount = (state.behaviorPatterns || []).filter((p) => (p.source ?? 'ai') === 'ai').length;
+    if (aiCount < 5) generate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function togglePattern(pattern) {
     const cur = state.selectedBehaviors || [];
-    const idx = cur.findIndex((p) => p.title === pattern.title);
+    const idx = cur.findIndex((p) => p.id === pattern.id);
     if (idx >= 0) {
       setState((s) => ({ ...s, selectedBehaviors: cur.filter((_, i) => i !== idx) }));
     } else if (cur.length < 4) {
-      setState((s) => ({ ...s, selectedBehaviors: [...cur, pattern] }));
+      setState((s) => ({ ...s, selectedBehaviors: [...cur, { ...pattern }] }));
+    }
+  }
+
+  function startEdit(pattern, e) {
+    e.stopPropagation();
+    setEditingId(pattern.id);
+    setEditDraft({ title: pattern.title, description: pattern.description });
+  }
+
+  function saveEdit(pattern) {
+    const newTitle = editDraft.title.trim();
+    const newDesc = editDraft.description.trim();
+    if (!newTitle) {
+      if (pattern.source === 'user') {
+        removePattern(pattern.id);
+      } else {
+        cancelEdit(null);
+      }
+      return;
+    }
+    const wasEdited = newTitle !== pattern.title || newDesc !== pattern.description;
+    const updated = { ...pattern, title: newTitle, description: newDesc, edited: wasEdited || pattern.edited };
+    setState((s) => ({
+      ...s,
+      behaviorPatterns: s.behaviorPatterns.map((p) => (p.id === pattern.id ? updated : p)),
+      selectedBehaviors: s.selectedBehaviors.map((p) => (p.id === pattern.id ? updated : p)),
+    }));
+    setEditingId(null);
+    setEditDraft({ title: '', description: '' });
+  }
+
+  function cancelEdit(pattern) {
+    if (pattern?.source === 'user' && !pattern.title) {
+      removePattern(pattern.id);
+    }
+    setEditingId(null);
+    setEditDraft({ title: '', description: '' });
+  }
+
+  function addCustomPattern() {
+    if (!canAddCustom) return;
+    const id = `user-${Date.now()}`;
+    const newPattern = { id, source: 'user', title: '', description: '', edited: false };
+    setState((s) => ({ ...s, behaviorPatterns: [...s.behaviorPatterns, newPattern] }));
+    setEditingId(id);
+    setEditDraft({ title: '', description: '' });
+  }
+
+  function removePattern(patternId) {
+    setState((s) => ({
+      ...s,
+      behaviorPatterns: s.behaviorPatterns.filter((p) => p.id !== patternId),
+      selectedBehaviors: s.selectedBehaviors.filter((p) => p.id !== patternId),
+    }));
+    if (editingId === patternId) {
+      setEditingId(null);
+      setEditDraft({ title: '', description: '' });
     }
   }
 
@@ -1295,6 +1372,10 @@ function Step6Behaviors({ state, setState, onNext, onBack, t, project, da }) {
     } catch { /* non-fatal */ }
     onNext();
   }
+
+  const hasEnoughPatterns = patterns.filter((p) => (p.source ?? 'ai') === 'ai').length >= 5;
+
+  const badgeStyle = { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, lineHeight: 1.4 };
 
   return (
     <div className="work">
@@ -1342,37 +1423,130 @@ function Step6Behaviors({ state, setState, onNext, onBack, t, project, da }) {
         </div>
       )}
 
-      {!generating && patterns.length === 5 && (
+      {!generating && hasEnoughPatterns && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16, marginBottom: 12 }}>
-            {patterns.map((pattern, i) => {
-              const sel = selected.some((p) => p.title === pattern.title);
+            {patterns.map((pattern) => {
+              const sel = selected.some((p) => p.id === pattern.id);
+              const isEditing = editingId === pattern.id;
               return (
                 <div
-                  key={i}
-                  role="button"
-                  tabIndex={0}
+                  key={pattern.id}
+                  role={isEditing ? undefined : 'button'}
+                  tabIndex={isEditing ? undefined : 0}
                   className={`ccard${sel ? ' filled' : ''}`}
-                  style={{ cursor: 'pointer', outline: sel ? '2px solid var(--accent)' : undefined }}
-                  onClick={() => togglePattern(pattern)}
-                  onKeyDown={(e) => {
+                  style={{ cursor: isEditing ? 'default' : 'pointer', outline: sel ? '2px solid var(--accent)' : undefined }}
+                  onClick={isEditing ? undefined : () => togglePattern(pattern)}
+                  onKeyDown={isEditing ? undefined : (e) => {
                     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePattern(pattern); }
                   }}
                 >
-                  {sel && (
-                    <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, marginBottom: 6 }}>
-                      ✓ {da ? 'Valgt' : 'Selected'}
+                  {/* Badge row */}
+                  <div style={{ display: 'flex', gap: 5, marginBottom: 8, flexWrap: 'wrap', minHeight: 22 }}>
+                    {sel && (
+                      <span style={{ ...badgeStyle, color: 'var(--accent)', background: 'var(--accent-soft)' }}>
+                        ✓ {da ? 'Valgt' : 'Selected'}
+                      </span>
+                    )}
+                    {pattern.source === 'user' && (
+                      <span style={{ ...badgeStyle, color: 'var(--ink-2)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                        {t('tier2.step6CustomBadge')}
+                      </span>
+                    )}
+                    {pattern.edited && pattern.source !== 'user' && (
+                      <span style={{ ...badgeStyle, color: 'var(--ink-3)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                        {t('tier2.step6EditedBadge')}
+                      </span>
+                    )}
+                  </div>
+
+                  {isEditing ? (
+                    <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <input
+                        autoFocus
+                        className="input"
+                        placeholder={da ? 'Titel (3-6 ord)…' : 'Title (3-6 words)…'}
+                        value={editDraft.title}
+                        onChange={(e) => setEditDraft((d) => ({ ...d, title: e.target.value }))}
+                        style={{ fontSize: 14, fontWeight: 600 }}
+                      />
+                      <textarea
+                        className="textarea"
+                        rows={3}
+                        placeholder={da ? 'Konkret beskrivelse af adfærden i praksis…' : 'Concrete description of the behaviour in practice…'}
+                        value={editDraft.description}
+                        onChange={(e) => setEditDraft((d) => ({ ...d, description: e.target.value }))}
+                        style={{ resize: 'vertical', minHeight: 60, fontSize: 13 }}
+                      />
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          style={{ fontSize: 13, padding: '4px 12px' }}
+                          onClick={() => cancelEdit(pattern)}
+                        >
+                          {da ? 'Annullér' : 'Cancel'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          style={{ fontSize: 13, padding: '4px 12px' }}
+                          onClick={() => saveEdit(pattern)}
+                        >
+                          {da ? 'Gem' : 'Save'}
+                        </button>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      <h3 style={{ margin: '0 0 8px', fontSize: 15 }}>{pattern.title}</h3>
+                      <p style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.65 }}>
+                        {pattern.description}
+                      </p>
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          style={{ fontSize: 12, padding: '2px 10px' }}
+                          onClick={(e) => startEdit(pattern, e)}
+                        >
+                          {da ? 'Rediger' : 'Edit'}
+                        </button>
+                        {pattern.source === 'user' && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            style={{ fontSize: 12, padding: '2px 10px', color: 'var(--ink-3)' }}
+                            onClick={(e) => { e.stopPropagation(); removePattern(pattern.id); }}
+                          >
+                            {da ? 'Fjern' : 'Remove'}
+                          </button>
+                        )}
+                      </div>
+                    </>
                   )}
-                  <h3 style={{ margin: '0 0 8px', fontSize: 15 }}>{pattern.title}</h3>
-                  <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.65 }}>{pattern.description}</p>
                 </div>
               );
             })}
           </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+            <button
+              className="btn btn-ghost"
+              onClick={addCustomPattern}
+              disabled={!canAddCustom}
+              title={!canAddCustom ? t('tier2.step6CustomMax') : undefined}
+            >
+              {t('tier2.step6AddCustom')}
+            </button>
+            {!canAddCustom && (
+              <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>{t('tier2.step6CustomMax')}</span>
+            )}
+          </div>
+
           <div style={{ marginBottom: 24 }}>
             <button className="btn btn-ghost" onClick={generate}>
-              {da ? 'Generér nye forslag' : 'Generate new suggestions'}
+              {da ? 'Generér nye AI-forslag' : 'Generate new AI suggestions'}
             </button>
           </div>
         </>
@@ -1382,8 +1556,8 @@ function Step6Behaviors({ state, setState, onNext, onBack, t, project, da }) {
         <div className="actionbar-inner">
           <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>
             {selected.length} {da
-              ? `af 5 valgt${selected.length < 3 ? ' — vælg mindst 3' : ''}`
-              : `of 5 selected${selected.length < 3 ? ' — select at least 3' : ''}`}
+              ? `valgt${selected.length < 3 ? ' — vælg mindst 3' : ''}`
+              : `selected${selected.length < 3 ? ' — select at least 3' : ''}`}
           </div>
           <button
             className="btn btn-primary btn-lg"
@@ -1476,8 +1650,20 @@ export function Tier2Page({ project }) {
             next.ja_hidden = steps[5].hidden ?? '';
           }
           if (steps[6]) {
-            next.behaviorPatterns  = steps[6].patterns ?? [];
-            next.selectedBehaviors = steps[6].selected ?? [];
+            next.behaviorPatterns = (steps[6].patterns ?? []).map((p, i) => ({
+              id:          p.id ?? `loaded-${i}`,
+              source:      p.source ?? 'ai',
+              title:       p.title ?? '',
+              description: p.description ?? '',
+              edited:      p.edited ?? false,
+            }));
+            next.selectedBehaviors = (steps[6].selected ?? []).map((p, i) => ({
+              id:          p.id ?? `sel-${i}`,
+              source:      p.source ?? 'ai',
+              title:       p.title ?? '',
+              description: p.description ?? '',
+              edited:      p.edited ?? false,
+            }));
           }
 
           const maxStep = Math.max(...Object.keys(steps).map(Number));

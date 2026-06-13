@@ -555,11 +555,11 @@ async function generateBehaviorPatterns({ fitCriteria, candidateProfile, jobAnal
   if (!jsonMatch) throw new Error('Invalid behavior patterns response');
 
   const parsed = JSON.parse(jsonMatch[0]);
-  if (!Array.isArray(parsed.patterns) || parsed.patterns.length < 1) {
+  if (!Array.isArray(parsed.patterns) || parsed.patterns.length < 5) {
     throw new Error('Expected behavior patterns array');
   }
 
-  return parsed.patterns.slice(0, 5).map((p) => ({
+  return parsed.patterns.slice(0, 8).map((p) => ({
     title:       String(p.title || ''),
     description: String(p.description || ''),
   }));

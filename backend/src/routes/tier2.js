@@ -287,13 +287,20 @@ router.post('/generate-behaviors', aiLimiter, async (req, res, next) => {
 
 router.post('/save-behaviors', async (req, res, next) => {
   try {
+    const patternItem = z.object({
+      id:          z.string().optional(),
+      source:      z.enum(['ai', 'user']).optional(),
+      title:       z.string(),
+      description: z.string(),
+      edited:      z.boolean().optional(),
+    });
     const schema = z.object({
       project_id: z.string().uuid(),
-      patterns:   z.array(z.object({ title: z.string(), description: z.string() })).min(5).max(5),
-      selected:   z.array(z.object({ title: z.string(), description: z.string() })).min(3).max(4),
+      patterns:   z.array(patternItem).min(5).max(10),
+      selected:   z.array(patternItem).min(3).max(4),
     });
     const parsed = schema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid input — select 3 or 4 patterns' });
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid input — select 3 or 4 patterns, minimum 5 total patterns required' });
     const { project_id, patterns, selected } = parsed.data;
 
     if (!(await isMember(project_id, req.user.id))) {
