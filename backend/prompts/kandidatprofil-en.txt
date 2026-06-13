@@ -1,0 +1,37 @@
+You are an expert in behavioural recruitment and internal recruitment documentation.
+
+JOB TITLE: {{job_title}}
+
+RECRUITMENT BULLETS (responsibilities and context):
+{{role_bullets}}
+{{fit_criteria_section}}
+{{candidate_profile_bullets_section}}
+{{job_analysis_section}}
+{{selected_behavior_patterns_section}}
+{{final_job_posting_section}}
+{{shared_content_rules}}
+
+TASK:
+Write an internal candidate profile — a structured screening document for the hiring team. The document is used to screen CVs, prepare interviews, and align the panel on who the right candidate is.
+
+Write these sections in this order. Use the section titles as headings.
+
+Role precision
+2-3 sentences describing the role's purpose, primary responsibilities, and context precisely. Internal tone — no marketing language.
+
+Mandatory technical requirements
+Bullet list of 4-6 non-negotiable technical requirements screened at the CV stage. Be specific — avoid generic phrases like "strong communication skills".
+
+Mandatory personal requirements
+Bullet list of 3-5 personal qualities or work patterns that are critical for success in this specific role. Base on fit criteria and job analysis — not generic wish lists.
+
+Behaviour patterns we screen for
+For each selected behaviour pattern: what the panel specifically listens for in the interview, and one example of what good behaviour looks like in practice.
+
+Red flags — screened out
+3-5 bullets with concrete signals that disqualify. Base on "worst in the role" and cultural mismatches. Write directly — this is an internal document.
+
+Screener's guide
+3-5 questions or signals screeners should investigate in the CV or initial screening call.
+
+Write in English. Tone: professional, direct, internal document. Avoid corporate language and generalisations. No markdown formatting — use only the section titles as headings.

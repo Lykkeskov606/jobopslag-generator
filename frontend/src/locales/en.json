@@ -168,7 +168,18 @@
     "step7RefusedHint": "Try rephrasing your inputs in the earlier steps.",
     "step7EditBack": "Edit inputs",
     "step7FinalTitle": "Your job posting",
-    "step7SaveBtn": "Save and finish"
+    "step7SaveBtn": "Save and finish",
+    "stepOutputs": "Documents",
+    "stepDownload": "Download",
+    "step8Title": "Generate recruitment documents",
+    "step8Sub": "AI generates a candidate profile and interview guide based on your complete recruitment foundation.",
+    "step8ProfileTitle": "Candidate profile",
+    "step8ProfileSub": "Internal screening document for the hiring team.",
+    "step8GeneratingProfile": "Generating candidate profile…",
+    "step8GeneratingProfileSub": "Calling Claude AI · Usually takes 10–20 seconds",
+    "step8ProfileReady": "Candidate profile generated",
+    "step8Regenerate": "Regenerate",
+    "step8ErrorProfile": "Could not generate candidate profile — please try again."
   },
   "admin": {
     "title": "Admin Dashboard",

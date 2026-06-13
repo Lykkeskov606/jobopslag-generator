@@ -5,7 +5,7 @@ const multer = require('multer');
 const mammoth = require('mammoth');
 const { requireAuth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/rateLimiter');
-const { generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns, generateJobPosting } = require('../services/claudeService');
+const { generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns, generateJobPosting, generateCandidateProfile } = require('../services/claudeService');
 const { runBiasCheck, checkTierC } = require('../services/biasEngine');
 const db = require('../db');
 
@@ -403,6 +403,72 @@ router.post('/generate-job-posting', aiLimiter, async (req, res, next) => {
       bias_warnings: [...tierCWarningsA, ...tierCWarningsB],
       generation_batch: batchId,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/tier2/generate-candidate-profile ────────────────────────────────
+
+router.post('/generate-candidate-profile', aiLimiter, async (req, res, next) => {
+  try {
+    const schema = z.object({ project_id: z.string().uuid() });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
+    const { project_id } = parsed.data;
+
+    if (!(await isMember(project_id, req.user.id))) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const { rows: inputRows } = await db.query(
+      `SELECT step_number, input_data FROM project_inputs
+       WHERE project_id = $1 AND step_number IN (2, 3, 4, 5, 6)`,
+      [project_id]
+    );
+    const steps = {};
+    for (const row of inputRows) steps[row.step_number] = row.input_data;
+
+    const { rows: outputRows } = await db.query(
+      `SELECT content FROM project_outputs
+       WHERE project_id = $1 AND output_type = 'jobopslag' AND variant = 'A'
+       ORDER BY generated_at DESC LIMIT 1`,
+      [project_id]
+    );
+
+    const step2 = steps[2] || {};
+    const step3 = steps[3] || {};
+    const step4 = steps[4] || {};
+    const step5 = steps[5] || {};
+    const step6 = steps[6] || {};
+    const language = step2.outputLanguage || 'da';
+
+    const content = await generateCandidateProfile({
+      jobTitle:         step2.jobTitle || '',
+      bullets:          (step2.bullets || []).filter(Boolean),
+      fitCriteria:      step3.fitCriteria || {},
+      candidateProfile: step4.requirements || [],
+      jobAnalysis:      { best: step5.best || '', worst: step5.worst || '', hidden: step5.hidden || '' },
+      behaviorPatterns: step6.selected || [],
+      finalJobPosting:  outputRows[0]?.content || '',
+      language,
+      projectId:        project_id,
+      userId:           req.user.id,
+    });
+
+    await db.query(
+      `INSERT INTO project_outputs
+         (project_id, output_type, variant, content, language, ai_model_version)
+       VALUES ($1, 'candidate_profile', 'A', $2, $3, 'claude-sonnet-4-6')`,
+      [project_id, content, language]
+    );
+
+    await db.query(
+      `UPDATE projects SET completion_step = 8, updated_at = NOW() WHERE id = $1`,
+      [project_id]
+    );
+
+    res.json({ content });
   } catch (err) {
     next(err);
   }

@@ -348,7 +348,18 @@
     "step7RefusedHint": "Prøv at omformulere dine input i de tidligere trin.",
     "step7EditBack": "Rediger input",
     "step7FinalTitle": "Dit jobopslag",
-    "step7SaveBtn": "Gem og afslut"
+    "step7SaveBtn": "Gem og afslut",
+    "stepOutputs": "Dokumenter",
+    "stepDownload": "Download",
+    "step8Title": "Generer rekrutteringsdokumenter",
+    "step8Sub": "AI genererer kandidatprofil og interviewguide baseret på dit samlede rekrutteringsgrundlag.",
+    "step8ProfileTitle": "Kandidatprofil",
+    "step8ProfileSub": "Internt screeningsdokument til ansættelsesteamet.",
+    "step8GeneratingProfile": "Genererer kandidatprofil…",
+    "step8GeneratingProfileSub": "Kalder Claude AI · Tager typisk 10–20 sekunder",
+    "step8ProfileReady": "Kandidatprofil genereret",
+    "step8Regenerate": "Generér igen",
+    "step8ErrorProfile": "Kunne ikke generere kandidatprofil — prøv igen."
   },
   "admin": {
     "title": "Admin-dashboard",

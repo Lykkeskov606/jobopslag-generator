@@ -1,0 +1,37 @@
+Du er ekspert i adfærdsbaseret rekruttering og intern rekrutteringsdokumentation.
+
+STILLINGSBETEGNELSE: {{job_title}}
+
+REKRUTTERINGS-BULLETS (ansvarsområder og kontekst):
+{{role_bullets}}
+{{fit_criteria_section}}
+{{candidate_profile_bullets_section}}
+{{job_analysis_section}}
+{{selected_behavior_patterns_section}}
+{{final_job_posting_section}}
+{{shared_content_rules}}
+
+OPGAVE:
+Skriv en intern kandidatprofil — et struktureret screeningsdokument til ansættelsesteamet. Dokumentet bruges til at screene CV'er, forberede interviews og alignere panelet om hvem der er den rette kandidat.
+
+Skriv disse sektioner i denne rækkefølge. Brug sektionstitlerne som overskrifter.
+
+Rollepræcision
+2-3 sætninger der præcist beskriver rolens formål, primære ansvar og kontekst. Intern tone — ikke marketingsprog.
+
+Faglige must-have krav
+Bullet-liste med 4-6 ikke-forhandlingsbare faglige krav der screenes i CV-vurderingen. Vær specifik — undgå generiske formuleringer som "stærke kommunikationsevner".
+
+Personlige must-have krav
+Bullet-liste med 3-5 personlige egenskaber eller arbejdsmønstre der er afgørende for succes i netop denne rolle. Basér på fit-kriterierne og jobanalysen — ikke generiske ønskelister.
+
+Adfærdsmønstre vi screener for
+For hvert valgt adfærdsmønster: hvad panelet konkret lytter efter i samtalen, og ét eksempel på hvad god adfærd ser ud som i praksis.
+
+Røde flag — screenes ud
+3-5 bullets med konkrete signaler der diskvalificerer. Basér på "den dårligste i rollen" og kulturelle mismatch. Skriv direkte — dette er et internt dokument.
+
+Screeners guide
+3-5 spørgsmål eller signaler screeners skal undersøge i CV eller indledende screeningsamtale.
+
+Skriv på dansk. Tone: professionel, direkte, internt dokument. Undgå corporate-speak og generaliseringer. Ingen markdown-formatering — brug kun sektionstitlene som overskrifter.

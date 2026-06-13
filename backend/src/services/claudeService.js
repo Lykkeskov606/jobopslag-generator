@@ -565,4 +565,79 @@ async function generateBehaviorPatterns({ fitCriteria, candidateProfile, jobAnal
   }));
 }
 
-module.exports = { generateJobPosting, generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns };
+// ── Tier 2: candidate profile ─────────────────────────────────────────────────
+
+async function generateCandidateProfile({
+  jobTitle, bullets, fitCriteria, candidateProfile, jobAnalysis, behaviorPatterns, finalJobPosting,
+  language, projectId, userId,
+}) {
+  const promptFile = `kandidatprofil-${language}.txt`;
+  const template = readPrompt(promptFile);
+  const isDa = language === 'da';
+  const noInfo = isDa ? '(ikke angivet)' : '(not specified)';
+
+  const bulletsText = (bullets || []).filter(Boolean).map((b) => `• ${b}`).join('\n') || noInfo;
+
+  function buildSection(header, lines) {
+    const filtered = lines.filter(Boolean);
+    return filtered.length ? `\n${header}\n${filtered.join('\n')}\n` : '';
+  }
+
+  const fitParts = [
+    fitCriteria?.job_fit     && `${isDa ? 'Job-fit'    : 'Job fit'}: ${fitCriteria.job_fit}`,
+    fitCriteria?.team_fit    && `${isDa ? 'Team-fit'   : 'Team fit'}: ${fitCriteria.team_fit}`,
+    fitCriteria?.leader_fit  && `${isDa ? 'Leder-fit'  : 'Leader fit'}: ${fitCriteria.leader_fit}`,
+    fitCriteria?.culture_fit && `${isDa ? 'Kultur-fit' : 'Culture fit'}: ${fitCriteria.culture_fit}`,
+  ].filter(Boolean);
+  const fitSection = buildSection(isDa ? 'FIT-KRITERIER:' : 'FIT CRITERIA:', fitParts);
+
+  const profileBullets = Array.isArray(candidateProfile) ? candidateProfile.filter((b) => b?.trim()) : [];
+  const profileSection = buildSection(
+    isDa ? 'KANDIDATPROFIL (krav og dimensioner):' : 'CANDIDATE PROFILE (requirements and dimensions):',
+    profileBullets.map((b) => `• ${b}`)
+  );
+
+  const analysisParts = [
+    jobAnalysis?.best   && `${isDa ? 'Bedste i rollen'    : 'Best in role'}: ${jobAnalysis.best}`,
+    jobAnalysis?.worst  && `${isDa ? 'Dårligste i rollen' : 'Worst in role'}: ${jobAnalysis.worst}`,
+    jobAnalysis?.hidden && `${isDa ? 'Skjulte krav'       : 'Hidden requirement'}: ${jobAnalysis.hidden}`,
+  ].filter(Boolean);
+  const analysisSection = buildSection(isDa ? 'JOBANALYSE:' : 'JOB ANALYSIS:', analysisParts);
+
+  const patternLines = Array.isArray(behaviorPatterns) && behaviorPatterns.length
+    ? behaviorPatterns.map((p) => `• ${p.title}: ${p.description}`)
+    : [];
+  const patternsSection = buildSection(
+    isDa ? 'VALGTE ADFÆRDSMØNSTRE:' : 'SELECTED BEHAVIOUR PATTERNS:',
+    patternLines
+  );
+
+  const postingSection = finalJobPosting
+    ? `\n${isDa ? 'GENERERET JOBOPSLAG (variant A):' : 'GENERATED JOB POSTING (variant A):'}\n${finalJobPosting.slice(0, 2000)}\n`
+    : '';
+
+  const sharedRules = readSharedRules(language);
+
+  const prompt = fillTemplate(template, {
+    job_title:                          jobTitle,
+    role_bullets:                       bulletsText,
+    fit_criteria_section:               fitSection,
+    candidate_profile_bullets_section:  profileSection,
+    job_analysis_section:               analysisSection,
+    selected_behavior_patterns_section: patternsSection,
+    final_job_posting_section:          postingSection,
+    shared_content_rules:               sharedRules,
+  });
+
+  const text = await callClaude(prompt, promptFile, projectId, userId, 8);
+
+  if (isRefusal(text)) {
+    const err = new Error('content_refused');
+    err.status = 422;
+    throw err;
+  }
+
+  return text.trim();
+}
+
+module.exports = { generateJobPosting, generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns, generateCandidateProfile };
