@@ -22,6 +22,23 @@ For hvert adfærdsmønster skal du generere:
 
 Rubrik-kriterierne skal være rolle-specifikke og adfærdsorienterede — ikke generiske.
 
+KRITISK STAR-PRINCIP — LÆSES NØJE:
+Spørgsmålet skal være SPECIFIKT om situationen (en konkret kontekst der matcher mønsterets domæne) men ÅBENT om handlingen. Kandidaten bestemmer selv hvad de gjorde — det er pointen med STAR.
+
+FORBUDT i hovedspørgsmålet: formuleringer der afslører den ønskede adfærd eller det forventede svar, fx:
+- "...og du tog initiativ til at..."
+- "...og du løste det ved at..."
+- "...uden at eskalere til din leder"
+- "...ved at kommunikere direkte med teamet"
+- "...og du undgik X"
+Disse formuleringer leaker det ønskede svar og gør 4-niveau-scoring upålidelig: kandidaten gentager bare spørgsmålets ordlyd og lander på Niveau 4 uden at have udvist adfærden.
+
+KORREKT FORMAT — eksempel:
+Forkert: "Fortæl om en gang du opdagede at en leverance var i fare for at glide, og du handlede proaktivt ved at tage direkte kontakt til det andet team uden at eskalere til din leder."
+Rigtigt: "Fortæl om en gang du opdagede at en leverance fra et andet team var i fare for at glide. Hvad skete der, og hvad gjorde du?"
+
+Probe'en er stedet hvor du graver dybere: "Hvad konkret gjorde du — hvem kontaktede du først, og hvorfor? Hvad skete der som resultat?"
+
 Return KUN dette JSON-objekt — ingen forklaring, ingen markdown, ingen tekst udenfor JSON:
 {
   "guide": [

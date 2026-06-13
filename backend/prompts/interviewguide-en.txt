@@ -22,6 +22,23 @@ For each behaviour pattern generate:
 
 Rubric criteria must be role-specific and behaviour-oriented — not generic.
 
+CRITICAL STAR PRINCIPLE — READ CAREFULLY:
+The question must be SPECIFIC about the situation (a concrete context matching the pattern's domain) but OPEN about the action. The candidate decides what they did — that is the entire point of STAR.
+
+FORBIDDEN in the main question: any phrasing that reveals the desired behaviour or expected answer, such as:
+- "...and you took action to align with the team directly"
+- "...without escalating to your manager"
+- "...and you resolved it by..."
+- "...you successfully avoided X"
+- "...by communicating directly with..."
+These phrases leak the desired answer and destroy 4-level scoring validity: the candidate simply repeats the question's wording and lands on Level 4 without having demonstrated the behaviour.
+
+CORRECT FORMAT — example:
+Wrong: "Tell me about a time when you identified that a dependency was at risk of slipping, and you took action to align with that team directly, without escalating to your manager first."
+Right: "Tell me about a time when you spotted that a cross-team dependency was at risk of slipping. What did you do?"
+
+The probe is where you dig deeper: "Walk me through exactly what you did — who did you contact first, and why? What happened as a result?"
+
 Return ONLY this JSON object — no explanation, no markdown, no text outside JSON:
 {
   "guide": [
