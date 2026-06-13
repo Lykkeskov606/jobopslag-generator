@@ -106,9 +106,14 @@ router.post('/parse-template', (req, res, next) => {
       if (!req.file) return res.json({ templateText: null, filename: null });
 
       let text = '';
+      let templateHtml = null;
       if (req.file.originalname.toLowerCase().endsWith('.docx')) {
-        const { value } = await mammoth.extractRawText({ buffer: req.file.buffer });
-        text = value.slice(0, 3000);
+        const [rawResult, htmlResult] = await Promise.all([
+          mammoth.extractRawText({ buffer: req.file.buffer }),
+          mammoth.convertToHtml({ buffer: req.file.buffer }),
+        ]);
+        text = rawResult.value.slice(0, 3000);
+        templateHtml = htmlResult.value.slice(0, 12000);
       } else {
         // PDF: basic text extraction — PDF.js not available server-side
         text = req.file.buffer.toString('latin1').replace(/[^\x20-\x7E\n\r]/g, ' ').slice(0, 3000);
@@ -129,7 +134,7 @@ router.post('/parse-template', (req, res, next) => {
         });
       }
 
-      res.json({ templateText: trimmed, filename: req.file.originalname });
+      res.json({ templateText: trimmed, filename: req.file.originalname, templateHtml });
     } catch (err) {
       res.status(400).json({
         error: 'TEMPLATE_PARSE_FAILED',
@@ -368,6 +373,7 @@ router.post('/generate-job-posting', aiLimiter, async (req, res, next) => {
     const bullets = [...baseBullets, ...extra_bullets.filter((b) => b?.trim())];
 
     const templateContent   = step1.templateText || null;
+    const templateHtml      = step1.templateHtml || null;
     const fitCriteria       = step3.fitCriteria || {};
     const candidateProfile  = step4.requirements || [];
     const jobAnalysis       = { best: step5.best || '', worst: step5.worst || '', hidden: step5.hidden || '' };
@@ -375,7 +381,7 @@ router.post('/generate-job-posting', aiLimiter, async (req, res, next) => {
 
     const { variant_a, variant_b } = await generateJobPosting({
       jobTitle, bullets, language,
-      templateContent, templateHtml: null,
+      templateContent, templateHtml,
       location, startDate, employmentType,
       fitCriteria, candidateProfile, jobAnalysis, behaviorPatterns,
       projectId: project_id, userId: req.user.id,

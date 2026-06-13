@@ -63,12 +63,12 @@ function Step1Template({ state, setState, onNext, onSkip, t, da }) {
       const { data } = await api.post('/tier2/parse-template', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setState((s) => ({ ...s, templateText: data.templateText, templateFilename: data.filename, skipped: false }));
+      setState((s) => ({ ...s, templateText: data.templateText, templateHtml: data.templateHtml || null, templateFilename: data.filename, skipped: false }));
     } catch (err) {
       const msg = err.response?.data?.message
         || (da ? 'Kunne ikke læse filen. Prøv en anden fil eller spring over.' : 'Could not read file. Try another or skip.');
       setUploadError(msg);
-      setState((s) => ({ ...s, templateText: null, templateFilename: null, skipped: false }));
+      setState((s) => ({ ...s, templateText: null, templateHtml: null, templateFilename: null, skipped: false }));
     } finally {
       setUploading(false);
     }
@@ -1970,7 +1970,7 @@ export function Tier2Page({ project }) {
     const draft = loadDraft(project.id);
     return draft || {
       // Step 1
-      templateText: null, templateFilename: null, skipped: false,
+      templateText: null, templateHtml: null, templateFilename: null, skipped: false,
       // Step 2 — expanded to match Tier 1 input
       jobTitle: project.name !== 'Unavngivet kladde' && project.name !== 'Untitled draft' ? project.name : '',
       bullets: ['', '', '', ''],
@@ -2011,9 +2011,10 @@ export function Tier2Page({ project }) {
         _setState((prev) => {
           const next = { ...prev };
           if (steps[1]) {
-            next.templateText = steps[1].templateText ?? null;
+            next.templateText     = steps[1].templateText ?? null;
+            next.templateHtml     = steps[1].templateHtml ?? null;
             next.templateFilename = steps[1].filename ?? null;
-            next.skipped = steps[1].skipped ?? false;
+            next.skipped          = steps[1].skipped ?? false;
           }
           if (steps[2]) {
             next.jobTitle              = steps[2].jobTitle ?? prev.jobTitle;
@@ -2078,7 +2079,7 @@ export function Tier2Page({ project }) {
 
   async function toStep2({ fromSkip = false } = {}) {
     const skipFlag = fromSkip || state.skipped;
-    await saveStep(1, { templateText: state.templateText, filename: state.templateFilename, skipped: skipFlag });
+    await saveStep(1, { templateText: state.templateText, templateHtml: state.templateHtml, filename: state.templateFilename, skipped: skipFlag });
     setAppStep(2);
   }
 
