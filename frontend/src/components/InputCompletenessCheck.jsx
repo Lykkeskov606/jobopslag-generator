@@ -20,10 +20,14 @@ export function InputCompletenessCheck({
   jobTitle, bullets, location, workMode = '', department = '', teamComposition = '', language, projectId,
   onBack, onProceed,
   steps: stepsProp = null,
+  excludeIds = [],
+  titleOverride = null,
+  subtitleOverride = null,
 }) {
   const { t, i18n } = useTranslation();
   const lang = language === 'en' ? 'en' : 'da';
-  const missing = runCompletenessCheck({ jobTitle, bullets, location, workMode, department, teamComposition, language });
+  const allMissing = runCompletenessCheck({ jobTitle, bullets, location, workMode, department, teamComposition, language });
+  const missing = excludeIds.length ? allMissing.filter((c) => !excludeIds.includes(c.id)) : allMissing;
 
   const [notes, setNotes]     = useState({});
   const [skipped, setSkipped] = useState(new Set());
@@ -79,7 +83,7 @@ export function InputCompletenessCheck({
       const label = check?.label[lang] ?? id;
       return `${label}: ${text.trim()}`;
     });
-    onProceed(extraBullets);
+    onProceed(extraBullets, { skippedIds: [...skipped] });
   }
 
   const progressPct = missing.length > 0
@@ -122,16 +126,18 @@ export function InputCompletenessCheck({
         <div className="eyebrow">{t('completeness.step')}</div>
         {missing.length === 0 ? (
           <>
-            <h1>{t('completeness.allClear')}</h1>
+            <h1>{titleOverride ?? t('completeness.allClear')}</h1>
             <p>{t('completeness.allClearSub')}</p>
           </>
         ) : (
           <>
-            <h1>{i18n.language === 'da' ? 'Har du husket?' : 'Did you remember?'}</h1>
+            <h1>{titleOverride ?? (i18n.language === 'da' ? 'Har du husket?' : 'Did you remember?')}</h1>
             <p>
-              {missing.length === 1
-                ? t('completeness.subtitleSingle')
-                : t('completeness.subtitlePlural', { n: missing.length })}
+              {subtitleOverride ?? (
+                missing.length === 1
+                  ? t('completeness.subtitleSingle')
+                  : t('completeness.subtitlePlural', { n: missing.length })
+              )}
             </p>
           </>
         )}
