@@ -1313,6 +1313,19 @@ function Step6Behaviors({ state, setState, onNext, onBack, t, project, da }) {
         <p>{t('tier2.step6Sub')}</p>
       </section>
 
+      <div style={{
+        background: 'var(--accent-soft, #f0f4ff)',
+        border: '1px solid var(--accent-border, #c7d7fb)',
+        borderRadius: 8,
+        padding: '12px 16px',
+        fontSize: 14,
+        color: 'var(--ink-2)',
+        lineHeight: 1.65,
+        margin: '0 0 16px',
+      }}>
+        {t('tier2.step6InfoBox')}
+      </div>
+
       {generating && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, color: 'var(--ink-2)' }}>
           <div className="spinner" style={{ width: 18, height: 18 }} />
