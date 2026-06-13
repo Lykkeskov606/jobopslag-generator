@@ -27,15 +27,15 @@ function saveDraft(id, data) {
 
 function buildSteps(current, t) {
   const labels = [
-    t('tier2.stepTemplate'),
-    t('tier2.stepInfo'),
-    t('tier2.stepFit'),
-    t('tier2.stepReqs'),
-    t('tier2.stepAnalysis'),
-    t('tier2.stepBehaviors'),
-    t('tier2.stepJobPosting'),
-    t('tier2.stepOutputs'),
-    t('tier2.stepDownload'),
+    t('tier2.stepShortTemplate'),
+    t('tier2.stepShortInfo'),
+    t('tier2.stepShortFit'),
+    t('tier2.stepShortReqs'),
+    t('tier2.stepShortAnalysis'),
+    t('tier2.stepShortBehaviors'),
+    t('tier2.stepShortJobPosting'),
+    t('tier2.stepShortOutputs'),
+    t('tier2.stepShortDownload'),
   ];
   return labels.map((label, i) => ({
     label,
