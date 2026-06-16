@@ -633,17 +633,22 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project, da }) {
   const qType = JA_QUESTION_TYPES[subStep - 1];
   const answerKey = `ja_${qType}`;
   const answer = state[answerKey] || '';
+  const liveQType = useRef(qType);
+  liveQType.current = qType;
 
   function clearChallenge() {
     setChallenge(null);
     setChallengeAccepted(false);
   }
 
+  // Once a challenge is showing, typing/deleting in the textarea must NEVER hide it —
+  // only the explicit "Jeg holder fast" dismiss or leaving the question (subStep effect
+  // below) is allowed to clear it. `challengeAccepted` only toggles the compact view.
   useEffect(() => {
-    if (!challengeAccepted) setChallenge(null);
     clearTimeout(challengeTimer.current);
+    if (challenge) return;
     if (answer.trim().length < 25) return;
-    if (challengeAccepted) return;
+    const requestQType = qType;
     challengeTimer.current = setTimeout(async () => {
       setChallengeLoading(true);
       try {
@@ -653,7 +658,9 @@ function Step5JobAnalysis({ state, setState, onNext, onBack, t, project, da }) {
           answer,
           language,
         });
-        if (data.challenge) setChallenge(data);
+        // Guard against a late response landing after the user already moved to
+        // a different question (subStep changed while the request was in flight).
+        if (data.challenge && liveQType.current === requestQType) setChallenge(data);
       } catch {
         // Graceful degradation
       } finally {
