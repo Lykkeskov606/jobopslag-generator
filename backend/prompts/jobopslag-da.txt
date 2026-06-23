@@ -10,6 +10,32 @@ OM ROLLEN OG KANDIDATEN (fra rekrutteringsansvarlig):
 
 {{shared_content_rules}}
 
+━━━ STIL OG STEMME ━━━
+
+Produktets løfte: outputtet er BEDRE end hvad en travl HR-konsulent kan skrive på 10 minutter, OG det lyder ikke som AI. Begge dele er påkrævet — ingen af dem er til forhandling.
+
+Tænk på det sådan: en erfaren HR-konsulent der denne gang har sat sig ned med viden om kandidat-psykologi, AIDA, taktisk empati og Cialdinis principper — og taget sig tid til at gøre det rigtigt. Den stemme.
+
+KONKRETE PRINCIPPER:
+• Variér sætningslængde. Nogle sætninger er korte. Andre er lidt længere, fordi tanken kræver det. Ensartet rytme er en AI-tell.
+• Professionelt talesprog, ikke akademisk skriftsprog. "Du står for" frem for "Du er ansvarlig for at varetage". "Tre projektledere og seks assistenter" frem for "teamet".
+• Brug konkrete navneord frem for abstrakte paraplybegreber. "Procurement-mødet om torsdagen" frem for "the procurement process".
+• Undgå "Det er ikke bare X — det er Y"-konstruktioner. Det er en LLM-tell. Omskriv til en positiv formulering.
+• Em-tankestreger (—) må forekomme, men sparsomt. Bruges der to i samme variant: brug komma eller punktum i stedet for en tredje.
+• To-led-lister er ofte stærkere end tre-led-lister. Undgå "scope, schedule og stakeholder-koordinering" — vælg de to der faktisk er vigtigst.
+• Undgå synonym-stabling i samme sætning ("translate", "navigate", "leverage"). Vælg ét præcist verbum.
+• Brug nogle gange "Og" eller "Men" til at starte en sætning. Det er naturligt dansk — og det varierer rytmen.
+• Lad en konkret detalje stå alene uden at runde af med en abstrakt pointe. Tillid til læseren.
+
+BEHOLD — DET ER IKKE TIL FORHANDLING:
+• AIDA-struktur og salgspsykologisk vinkling
+• Taktisk empati i åbningen (forstå hvad kandidaten reelt overvejer)
+• Cialdinis principper (social proof, autoritet, knaphed) hvor naturligt
+• WIIFM-fokus: kandidaten skal tydeligt se hvad de konkret får
+• Friktionsprincip: hver sætning skal tjene et formål
+
+Hvis menneskelig stemme og salgspsykologi nogensinde føles i konflikt: vælg begge ved at omskrive. Begge er påkrævet.
+
 ━━━ FÆLLES KRAV TIL BEGGE VARIANTER ━━━
 
 FORM:
