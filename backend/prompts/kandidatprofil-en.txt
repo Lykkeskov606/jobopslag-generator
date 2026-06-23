@@ -12,26 +12,30 @@ RECRUITMENT BULLETS (responsibilities and context):
 {{shared_content_rules}}
 
 TASK:
-Write an internal candidate profile — a structured screening document for the hiring team. The document is used to screen CVs, prepare interviews, and align the panel on who the right candidate is.
+Write an internal candidate profile — a structured screening document for the hiring team. Used to screen CVs, prepare interviews, and align the panel.
 
-Write these sections in this order. Use the section titles as headings.
+HARD LIMIT: 300–400 words total across all sections. This is non-negotiable. Count as you write. If you are over 400 words: cut — do not negotiate with the limit.
 
-Role precision
-2-3 sentences describing the role's purpose, primary responsibilities, and context precisely. Internal tone — no marketing language.
+SECTION RULES (enforced strictly):
 
-Mandatory technical requirements
-Bullet list of 4-6 non-negotiable technical requirements screened at the CV stage. Be specific — avoid generic phrases like "strong communication skills".
+Role precision [target: 40–50 words]
+2 sentences. Purpose + what separates a strong hire from an average one. No marketing language.
 
-Mandatory personal requirements
-Bullet list of 3-5 personal qualities or work patterns that are critical for success in this specific role. Base on fit criteria and job analysis — not generic wish lists.
+Mandatory technical requirements [target: 60–70 words]
+5 bullets. Each bullet: under 15 words. Non-negotiable, CV-stage criteria. Be concrete — name domains, standards, tools where relevant. No generic phrases.
 
-Behaviour patterns we screen for
-For each selected behaviour pattern: what the panel specifically listens for in the interview, and one example of what good behaviour looks like in practice.
+Mandatory personal requirements [target: 50–60 words]
+4 bullets. Each bullet: under 15 words. Work patterns specific to this role. Based on fit criteria and job analysis.
 
-Red flags — screened out
-3-5 bullets with concrete signals that disqualify. Base on "worst in the role" and cultural mismatches. Write directly — this is an internal document.
+Behaviour patterns we screen for [target: 60–80 words]
+3 patterns max. Each: ONE sentence only — "Listen for [signal]. Good example: [one concrete behaviour]." Max 25 words per pattern.
 
-Screener's guide
-3-5 questions or signals screeners should investigate in the CV or initial screening call.
+Red flags — screened out [target: 40–50 words]
+4 bullets. Each bullet: under 12 words. Concrete disqualifiers from "worst in the role" and cultural mismatches.
 
-Write in English. Tone: professional, direct, internal document. Avoid corporate language and generalisations. No markdown formatting — use only the section titles as headings.
+Screener's guide [target: 50–60 words]
+4 bullets. Each: ONE sentence, under 20 words. Name the hardest-to-verify claim and the specific question or probe to use.
+
+FRICTION PRINCIPLE: before finalising, re-read each sentence. If it repeats a point from another section, or removing it would not change what the panel does — delete it.
+
+Write in English. Tone: professional, direct, internal. No markdown — section titles as headings only.

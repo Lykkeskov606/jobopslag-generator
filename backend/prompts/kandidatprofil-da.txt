@@ -12,26 +12,30 @@ REKRUTTERINGS-BULLETS (ansvarsområder og kontekst):
 {{shared_content_rules}}
 
 OPGAVE:
-Skriv en intern kandidatprofil — et struktureret screeningsdokument til ansættelsesteamet. Dokumentet bruges til at screene CV'er, forberede interviews og alignere panelet om hvem der er den rette kandidat.
+Skriv en intern kandidatprofil — et struktureret screeningsdokument til ansættelsesteamet. Bruges til at screene CV'er, forberede interviews og alignere panelet.
 
-Skriv disse sektioner i denne rækkefølge. Brug sektionstitlerne som overskrifter.
+HÅRD GRÆNSE: 300–400 ord i alt på tværs af alle sektioner. Ikke til forhandling. Tæl mens du skriver. Hvis du er over 400 ord: skær — forhandl ikke med grænsen.
 
-Rollepræcision
-2-3 sætninger der præcist beskriver rolens formål, primære ansvar og kontekst. Intern tone — ikke marketingsprog.
+SEKTIONSTEREGLER (overholdes strengt):
 
-Faglige must-have krav
-Bullet-liste med 4-6 ikke-forhandlingsbare faglige krav der screenes i CV-vurderingen. Vær specifik — undgå generiske formuleringer som "stærke kommunikationsevner".
+Rollepræcision [mål: 40–50 ord]
+2 sætninger. Formål + hvad der adskiller en stærk kandidat fra en gennemsnitlig. Ingen marketingsprog.
 
-Personlige must-have krav
-Bullet-liste med 3-5 personlige egenskaber eller arbejdsmønstre der er afgørende for succes i netop denne rolle. Basér på fit-kriterierne og jobanalysen — ikke generiske ønskelister.
+Faglige must-have krav [mål: 60–70 ord]
+5 bullets. Hvert bullet: under 15 ord. Ikke-forhandlingsbare krav til CV-screeningen. Vær konkret — nævn domæner, standarder,værktøjer. Ingen generiske formuleringer.
 
-Adfærdsmønstre vi screener for
-For hvert valgt adfærdsmønster: hvad panelet konkret lytter efter i samtalen, og ét eksempel på hvad god adfærd ser ud som i praksis.
+Personlige must-have krav [mål: 50–60 ord]
+4 bullets. Hvert bullet: under 15 ord. Arbejdsmønstre specifikt for denne rolle. Basér på fit-kriterier og jobanalyse.
 
-Røde flag — screenes ud
-3-5 bullets med konkrete signaler der diskvalificerer. Basér på "den dårligste i rollen" og kulturelle mismatch. Skriv direkte — dette er et internt dokument.
+Adfærdsmønstre vi screener for [mål: 60–80 ord]
+Maks 3 mønstre. Hvert mønster: ÉN sætning — "Lyt efter [signal]. Godt eksempel: [én konkret adfærd]." Maks 25 ord per mønster.
 
-Screeners guide
-3-5 spørgsmål eller signaler screeners skal undersøge i CV eller indledende screeningsamtale.
+Røde flag — screenes ud [mål: 40–50 ord]
+4 bullets. Hvert bullet: under 12 ord. Konkrete diskvalificerende signaler fra "den dårligste i rollen" og kulturelle mismatch.
 
-Skriv på dansk. Tone: professionel, direkte, internt dokument. Undgå corporate-speak og generaliseringer. Ingen markdown-formatering — brug kun sektionstitlene som overskrifter.
+Screeners guide [mål: 50–60 ord]
+4 bullets. Hvert: ÉN sætning, under 20 ord. Nævn det sværest verificerbare krav og det konkrete spørgsmål eller probe der afdækker det.
+
+FRIKTIONS-PRINCIP: læs hver sætning igennem inden du afleverer. Hvis den gentager et punkt fra en anden sektion, eller hvis at fjerne den ikke ville ændre panelets adfærd — slet den.
+
+Skriv på dansk. Tone: professionel, direkte, internt dokument. Ingen markdown — kun sektionstitlene som overskrifter.
