@@ -44,13 +44,21 @@ function _stripHtmlTags(h) {
 function parseDocxTemplateFromHtml(html) {
   if (!html?.trim()) return [];
   const sections = [];
-  let currentTitle = null, currentParagraphs = [], currentBullets = [];
+  // orderedLines preserves the exact document order of paragraphs and bullets
+  // within each section so COPY sections can be reproduced verbatim including
+  // interleaved benefit-heading/description pairs (e.g. DESMI perks).
+  let currentTitle = null, currentParagraphs = [], currentBullets = [], currentOrderedLines = [];
 
   function flush() {
     if (currentTitle !== null) {
-      sections.push({ title: currentTitle, paragraphs: [...currentParagraphs], bullets: [...currentBullets] });
+      sections.push({
+        title: currentTitle,
+        paragraphs: [...currentParagraphs],
+        bullets: [...currentBullets],
+        orderedLines: [...currentOrderedLines],
+      });
     }
-    currentTitle = null; currentParagraphs = []; currentBullets = [];
+    currentTitle = null; currentParagraphs = []; currentBullets = []; currentOrderedLines = [];
   }
 
   const re = /<(p|ul|h[1-6])[^>]*>([\s\S]*?)<\/\1>/gi;
@@ -66,7 +74,10 @@ function parseDocxTemplateFromHtml(html) {
     if (tag === 'ul') {
       const items = [...inner.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
         .map(x => _stripHtmlTags(x[1])).filter(Boolean);
-      if (currentTitle !== null) currentBullets.push(...items);
+      if (currentTitle !== null) {
+        currentBullets.push(...items);
+        for (const item of items) currentOrderedLines.push({ type: 'bullet', text: item });
+      }
       continue;
     }
     // Paragraph: detect bold-only headings (DESMI style: <p><strong>Title</strong></p>
@@ -77,13 +88,19 @@ function parseDocxTemplateFromHtml(html) {
       flush();
       currentTitle = boldBr[1].replace(/:\s*$/, '').trim();
       const body = _stripHtmlTags(boldBr[2]).trim();
-      if (body) currentParagraphs.push(body);
+      if (body) {
+        currentParagraphs.push(body);
+        currentOrderedLines.push({ type: 'paragraph', text: body });
+      }
     } else if (boldOnly) {
       flush();
       currentTitle = boldOnly[1].replace(/:\s*$/, '').trim();
     } else {
       const text = _stripHtmlTags(inner).trim();
-      if (text && currentTitle !== null) currentParagraphs.push(text);
+      if (text && currentTitle !== null) {
+        currentParagraphs.push(text);
+        currentOrderedLines.push({ type: 'paragraph', text });
+      }
     }
   }
   flush();
@@ -133,8 +150,17 @@ function buildTemplateSection(sections, language) {
     const tag = roleSpecific ? (da ? '[GENERER]' : '[GENERATE]') : (da ? '[KOPIER]' : '[COPY]');
     lines.push(`─── ${tag} ${s.title}`);
     if (!roleSpecific) {
-      for (const p of s.paragraphs) lines.push(p);
-      for (const b of s.bullets) lines.push(`• ${b}`);
+      // Use orderedLines (preserves document order for interleaved bullet/paragraph patterns
+      // like benefit sections where each bullet heading precedes its description paragraph).
+      // Fall back to separate paragraphs+bullets for sections parsed without orderedLines.
+      if (s.orderedLines && s.orderedLines.length > 0) {
+        for (const item of s.orderedLines) {
+          lines.push(item.type === 'bullet' ? `• ${item.text}` : item.text);
+        }
+      } else {
+        for (const p of s.paragraphs) lines.push(p);
+        for (const b of s.bullets) lines.push(`• ${b}`);
+      }
     }
     lines.push('');
   }
