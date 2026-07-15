@@ -19,8 +19,7 @@ Implementér `DELETE /api/user/account` (kræver auth + password-bekræftelse).
 Anonymisér brugeren: email → `deleted_<uuid>@deleted`, slet password_hash, sæt deleted_at.
 Slet projekter via cascade. Alternativt: hard delete i rækkefølge `bias_violations → ai_calls → events → project_members → projects → password_reset_tokens → users`.
 
-### Per-bruger AI budget cap (audit pkt. 24)
-I `generate.js`, `bulletChallenges.js`, `evidence.js` — før AI-kald: hent `SUM(cost_cents)` for brugeren i dag fra `ai_calls`. Sammenlign med daglig budget (default 500 øre = 5 kr). Returnér 429 hvis cap er nået. Superadmin bypasses (`req.user.role === 'superadmin'`).
+~~### Per-bruger AI budget cap (audit pkt. 24)~~ — **LØST** (SECURITY_AUDIT_v2.md pkt. 19): `budgetGuard`-middleware på alle 10 AI-endpoints, 5 kr/dag, superadmin bypasses.
 
 ---
 
