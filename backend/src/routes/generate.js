@@ -5,6 +5,7 @@ const { z } = require('zod');
 const mammoth = require('mammoth');
 const { requireAuth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/rateLimiter');
+const { budgetGuard } = require('../middleware/budgetGuard');
 const { runBiasCheck, checkTierC } = require('../services/biasEngine');
 const { generateJobPosting, parseBulletsFromFreetext } = require('../services/claudeService');
 const db = require('../db');
@@ -137,7 +138,7 @@ function multerErrorHandler(err, req, res, next) {
 }
 
 // POST /api/generate/tier1 — run bias check + generate 2 variants
-router.post('/tier1', aiLimiter, upload.single('template'), multerErrorHandler, async (req, res, next) => {
+router.post('/tier1', budgetGuard, aiLimiter, upload.single('template'), multerErrorHandler, async (req, res, next) => {
   // ── Payment gate (Fase 7 — Stripe). Superadmin always bypasses. ──────────────
   const isSuperAdmin = req.user.role === 'superadmin';
   // TODO Fase 7: if (!isSuperAdmin) { check subscription tier / credits here }
@@ -241,7 +242,7 @@ router.post('/tier1', aiLimiter, upload.single('template'), multerErrorHandler, 
 });
 
 // POST /api/generate/parse-bullets-from-freetext — extract bullets from free-form text
-router.post('/parse-bullets-from-freetext', aiLimiter, async (req, res, next) => {
+router.post('/parse-bullets-from-freetext', budgetGuard, aiLimiter, async (req, res, next) => {
   try {
     const schema = z.object({
       freetext: z.string().min(1).max(8000),

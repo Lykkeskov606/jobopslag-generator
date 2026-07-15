@@ -6,6 +6,7 @@ const mammoth = require('mammoth');
 const archiver = require('archiver');
 const { requireAuth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/rateLimiter');
+const { budgetGuard } = require('../middleware/budgetGuard');
 const { generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns, generateJobPosting, generateCandidateProfile, generateInterviewGuide } = require('../services/claudeService');
 const { runBiasCheck, checkTierC } = require('../services/biasEngine');
 const { buildDocxBuffer } = require('../utils/docxBuilder');
@@ -146,7 +147,7 @@ router.post('/parse-template', (req, res, next) => {
 
 // ── POST /api/tier2/fit-criteria — AI generates fit criteria ─────────────────
 
-router.post('/fit-criteria', aiLimiter, async (req, res, next) => {
+router.post('/fit-criteria', budgetGuard, aiLimiter, async (req, res, next) => {
   try {
     const schema = z.object({
       project_id:       z.string().uuid(),
@@ -182,7 +183,7 @@ router.post('/fit-criteria', aiLimiter, async (req, res, next) => {
 
 // ── POST /api/tier2/challenge-answer — AI challenges job analysis answer ─────
 
-router.post('/challenge-answer', aiLimiter, async (req, res, next) => {
+router.post('/challenge-answer', budgetGuard, aiLimiter, async (req, res, next) => {
   try {
     const schema = z.object({
       project_id:    z.string().uuid(),
@@ -235,7 +236,7 @@ router.post('/check-fit-bias', async (req, res, next) => {
 
 // ── POST /api/tier2/generate-behaviors — AI generates 5 behavior patterns ────
 
-router.post('/generate-behaviors', aiLimiter, async (req, res, next) => {
+router.post('/generate-behaviors', budgetGuard, aiLimiter, async (req, res, next) => {
   try {
     const schema = z.object({
       project_id: z.string().uuid(),
@@ -334,7 +335,7 @@ router.post('/save-behaviors', async (req, res, next) => {
 
 // ── POST /api/tier2/generate-job-posting — generate 2 job posting variants ────
 
-router.post('/generate-job-posting', aiLimiter, async (req, res, next) => {
+router.post('/generate-job-posting', budgetGuard, aiLimiter, async (req, res, next) => {
   try {
     const schema = z.object({
       project_id:    z.string().uuid(),
@@ -482,7 +483,7 @@ async function fetchAllDocData(projectId) {
 
 // ── POST /api/tier2/generate-candidate-profile ────────────────────────────────
 
-router.post('/generate-candidate-profile', aiLimiter, async (req, res, next) => {
+router.post('/generate-candidate-profile', budgetGuard, aiLimiter, async (req, res, next) => {
   try {
     const schema = z.object({ project_id: z.string().uuid() });
     const parsed = schema.safeParse(req.body);
@@ -548,7 +549,7 @@ router.post('/generate-candidate-profile', aiLimiter, async (req, res, next) => 
 
 // ── POST /api/tier2/generate-interview-guide ──────────────────────────────────
 
-router.post('/generate-interview-guide', aiLimiter, async (req, res, next) => {
+router.post('/generate-interview-guide', budgetGuard, aiLimiter, async (req, res, next) => {
   try {
     const schema = z.object({ project_id: z.string().uuid() });
     const parsed = schema.safeParse(req.body);

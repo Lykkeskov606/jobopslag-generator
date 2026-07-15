@@ -3,6 +3,7 @@ const router = express.Router();
 const { z } = require('zod');
 const { requireAuth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/rateLimiter');
+const { budgetGuard } = require('../middleware/budgetGuard');
 const { runEvidenceChallenge } = require('../services/ragService');
 
 const schema = z.object({
@@ -17,7 +18,7 @@ router.use(requireAuth);
 // POST /api/generate/evidence-challenge
 // Runs RAG search + Claude evidence challenge for the user's input.
 // Always returns {challenges:[...]} — never errors (graceful degradation).
-router.post('/evidence-challenge', aiLimiter, async (req, res, next) => {
+router.post('/evidence-challenge', budgetGuard, aiLimiter, async (req, res, next) => {
   try {
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) {
