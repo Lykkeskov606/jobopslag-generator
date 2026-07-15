@@ -64,7 +64,17 @@ function parseDocxTemplateFromHtml(html) {
     currentTitle = null; currentParagraphs = []; currentBullets = []; currentOrderedLines = [];
   }
 
-  const re = /<(p|ul|h[1-6])[^>]*>([\s\S]*?)<\/\1>/gi;
+  // Validates a candidate bold-heading capture: nested inline tags (<em>, <span>)
+  // are stripped, but the capture must not cross a </strong> boundary (that would
+  // be a mixed bold/plain paragraph, not a heading), and the stripped text must
+  // be short enough to plausibly be a heading.
+  function headingOf(raw) {
+    if (/<\/strong>/i.test(raw)) return null;
+    const txt = _stripHtmlTags(raw).replace(/:\s*$/, '').trim();
+    return txt && txt.length <= 120 ? txt : null;
+  }
+
+  const re = /<(p|ul|ol|h[1-6])[^>]*>([\s\S]*?)<\/\1>/gi;
   let m;
   while ((m = re.exec(html)) !== null) {
     const tag = m[1].toLowerCase(), inner = m[2], block = m[0];
@@ -74,30 +84,42 @@ function parseDocxTemplateFromHtml(html) {
       currentTitle = _stripHtmlTags(inner);
       continue;
     }
-    if (tag === 'ul') {
+    if (tag === 'ul' || tag === 'ol') {
       const items = [...inner.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
         .map(x => _stripHtmlTags(x[1])).filter(Boolean);
       if (currentTitle !== null) {
-        currentBullets.push(...items);
-        for (const item of items) currentOrderedLines.push({ type: 'bullet', text: item });
+        if (tag === 'ol') {
+          // Numbered list: keep the numbering visible so [COPY] sections reproduce it
+          items.forEach((item, i) => {
+            currentBullets.push(`${i + 1}. ${item}`);
+            currentOrderedLines.push({ type: 'numbered', text: `${i + 1}. ${item}` });
+          });
+        } else {
+          currentBullets.push(...items);
+          for (const item of items) currentOrderedLines.push({ type: 'bullet', text: item });
+        }
       }
       continue;
     }
     // Paragraph: detect bold-only headings (DESMI style: <p><strong>Title</strong></p>
-    // or <p><strong>Title</strong><br />body...</p>)
-    const boldBr   = block.match(/^<p[^>]*><strong>([^<]{1,120})<\/strong>\s*<br\s*\/?>([\s\S]*?)<\/p>$/i);
-    const boldOnly = block.match(/^<p[^>]*>\s*<strong>([^<]{1,120})<\/strong>\s*<\/p>$/i);
-    if (boldBr) {
+    // or <p><strong>Title</strong><br />body...</p>), incl. nested tags like
+    // <strong><em>Title</em></strong>. Word also emits <p><em><strong>…, so an
+    // optional inline wrapper before <strong> is allowed.
+    const boldBr   = block.match(/^<p[^>]*>\s*(?:<(?:em|span)[^>]*>\s*)?<strong>([\s\S]{1,300}?)<\/strong>\s*(?:<\/(?:em|span)>\s*)?<br\s*\/?>([\s\S]*?)<\/p>$/i);
+    const boldOnly = block.match(/^<p[^>]*>\s*(?:<(?:em|span)[^>]*>\s*)?<strong>([\s\S]{1,300}?)<\/strong>\s*(?:<\/(?:em|span)>\s*)?<\/p>$/i);
+    const brTitle   = boldBr   ? headingOf(boldBr[1])   : null;
+    const onlyTitle = boldOnly ? headingOf(boldOnly[1]) : null;
+    if (brTitle) {
       flush();
-      currentTitle = boldBr[1].replace(/:\s*$/, '').trim();
+      currentTitle = brTitle;
       const body = _stripHtmlTags(boldBr[2]).trim();
       if (body) {
         currentParagraphs.push(body);
         currentOrderedLines.push({ type: 'paragraph', text: body });
       }
-    } else if (boldOnly) {
+    } else if (onlyTitle) {
       flush();
-      currentTitle = boldOnly[1].replace(/:\s*$/, '').trim();
+      currentTitle = onlyTitle;
     } else {
       const text = _stripHtmlTags(inner).trim();
       if (text && currentTitle !== null) {
