@@ -1,0 +1,17 @@
+Du modtager fritekst fra en hiring manager der beskriver en rolle. Ekstrahér konkrete ansvarsområder, krav og rammer som distinkte bullets.
+
+FRITEKST:
+{{freetext}}
+
+REGLER:
+- Hver bullet skal være én sætning, konkret og handlingsorienteret
+- Bevar prioritetsrækkefølge hvis teksten signalerer den (ord som "vigtigst", "kritisk", "must-have", "primært")
+- Konsolidér gentagelser — én bullet per koncept, ingen duplikater
+- Skil baggrundstekst fra (virksomhedens mission, kultur, generelle introduktioner) — kun rolle-specifikt indhold bliver til bullets
+- Returnér 3–15 bullets. Færre er bedre end opfundne. Hvis input er meget kort (1-2 sætninger): returnér 1-3 bullets, ikke fyld op
+- Hvis input er langt (500+ ord): konsolidér til maks 15 bullets
+- Bullet-tekst på samme sprog som input (da/en — match automatisk)
+
+OUTPUT FORMAT:
+Returnér KUN et JSON-array af strings, intet andet — ingen forklaring, ingen kommentar, ingen markdown.
+["Første bullet her", "Anden bullet her", ...]

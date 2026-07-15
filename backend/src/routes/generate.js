@@ -6,7 +6,7 @@ const mammoth = require('mammoth');
 const { requireAuth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/rateLimiter');
 const { runBiasCheck, checkTierC } = require('../services/biasEngine');
-const { generateJobPosting } = require('../services/claudeService');
+const { generateJobPosting, parseBulletsFromFreetext } = require('../services/claudeService');
 const db = require('../db');
 const { trackEvent } = require('../services/events');
 
@@ -235,6 +235,29 @@ router.post('/tier1', aiLimiter, upload.single('template'), multerErrorHandler, 
       variant_a,
       variant_b,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/generate/parse-bullets-from-freetext — extract bullets from free-form text
+router.post('/parse-bullets-from-freetext', aiLimiter, async (req, res, next) => {
+  try {
+    const schema = z.object({
+      freetext: z.string().min(1).max(8000),
+      language: z.enum(['da', 'en']).default('da'),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
+    const { freetext, language } = parsed.data;
+
+    const bullets = await parseBulletsFromFreetext({
+      freetext, language,
+      projectId: null,
+      userId: req.user.id,
+    });
+
+    res.json({ bullets });
   } catch (err) {
     next(err);
   }

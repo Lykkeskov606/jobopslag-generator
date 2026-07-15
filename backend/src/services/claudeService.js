@@ -716,4 +716,29 @@ async function generateInterviewGuide({
   }));
 }
 
-module.exports = { generateJobPosting, generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns, generateCandidateProfile, generateInterviewGuide };
+// ── Freetext → bullets parser ─────────────────────────────────────────────────
+
+async function parseBulletsFromFreetext({ freetext, language, projectId, userId }) {
+  // Use the DA prompt for both languages — it auto-detects input language and
+  // mirrors it in bullet output. The EN prompt is provided for symmetry.
+  const lang = language === 'en' ? 'en' : 'da';
+  const promptFile = `freetext-to-bullets-${lang}.txt`;
+  const template = readPrompt(promptFile);
+  const prompt = fillTemplate(template, { freetext: freetext.slice(0, 4000) });
+
+  const text = await callClaude(prompt, promptFile, projectId, userId, null);
+
+  const cleaned = text.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
+  const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) return [];
+
+  const parsed = JSON.parse(jsonMatch[0]);
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .map((b) => String(b).trim())
+    .filter(Boolean)
+    .slice(0, 15);
+}
+
+module.exports = { generateJobPosting, generateFitCriteria, challengeJobAnalysisAnswer, generateBehaviorPatterns, generateCandidateProfile, generateInterviewGuide, parseBulletsFromFreetext };

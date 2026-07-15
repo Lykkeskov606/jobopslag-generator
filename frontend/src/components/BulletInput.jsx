@@ -1,8 +1,9 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { checkBulletBias } from '../lib/biasRules';
 import { BulletChallengeCard } from './BulletChallengeCard';
 import { useScrollAnchor } from '../hooks/useScrollAnchor';
+import { FreetextImportModal } from './FreetextImportModal';
 
 export function InlineBiasWarnings({ text, language }) {
   const violations = checkBulletBias(text, language);
@@ -36,6 +37,7 @@ export function BulletInput({
 }) {
   const { t, i18n } = useTranslation();
   const refs = useRef([]);
+  const [importOpen, setImportOpen] = useState(false);
   useScrollAnchor(Object.keys(challengeMap).length);
 
   const da = i18n.language === 'da';
@@ -80,7 +82,28 @@ export function BulletInput({
   const pN = placeholderMore ?? t('tier1.bulletMore');
   const addText = addLabel ?? t('tier1.addBullet');
 
+  function handleFreetextAdd(newBullets) {
+    // Append after existing bullets, respecting the 10-bullet cap.
+    // Fill empty slots first so we don't orphan existing row indices.
+    const combined = [...bullets];
+    for (const nb of newBullets) {
+      if (combined.filter((b) => b.trim()).length >= 10) break;
+      const emptyIdx = combined.findIndex((b) => !b.trim());
+      if (emptyIdx !== -1) combined[emptyIdx] = nb;
+      else combined.push(nb);
+    }
+    onChange(combined);
+  }
+
   return (
+    <>
+    {importOpen && (
+      <FreetextImportModal
+        language={language}
+        onAdd={handleFreetextAdd}
+        onClose={() => setImportOpen(false)}
+      />
+    )}
     <div className="bullets">
       {bullets.map((b, i) => (
         <div key={i} className="bullet-wrap">
@@ -126,12 +149,24 @@ export function BulletInput({
           )}
         </div>
       ))}
-      {bullets.length < 10 && (
-        <button type="button" className="add-bullet" onClick={add}>
-          <span className="plus">+</span>
-          {addText}
+      <div className="bullet-actions">
+        {bullets.length < 10 && (
+          <button type="button" className="add-bullet" onClick={add}>
+            <span className="plus">+</span>
+            {addText}
+          </button>
+        )}
+        <button
+          type="button"
+          className="add-bullet add-bullet-secondary"
+          onClick={() => setImportOpen(true)}
+          title={t('tier1.importFreetext')}
+        >
+          <span className="plus" style={{ fontSize: 13 }}>📋</span>
+          {t('tier1.importFreetext')}
         </button>
-      )}
+      </div>
     </div>
+    </>
   );
 }

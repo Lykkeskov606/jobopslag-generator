@@ -395,7 +395,7 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.01e
 @media (max-width: 640px) {
   .s-input .intro h1 { font-size: 34px; }
   .s-input .detail-grid { grid-template-columns: 1fr; }
-  .s-input .challenge, .s-input .add-bullet { margin-left: 0; }
+  .s-input .challenge, .s-input .add-bullet, .s-input .bullet-actions { margin-left: 0; }
   .challenge { margin-left: 0; }
   .s-input .bullet .num { display: none; }
   .s-input .actionbar-inner { flex-direction: column-reverse; align-items: stretch; }
@@ -833,3 +833,24 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.01e
 .delete-project-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
 .restore-project-btn { background: none; border: 1px solid var(--accent); color: var(--accent); border-radius: var(--radius); padding: 0.25rem 0.625rem; font-size: 0.8rem; cursor: pointer; white-space: nowrap; }
 .restore-project-btn:hover { background: var(--accent); color: white; }
+
+/* --- Freetext import modal --- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+.modal { background: var(--bg); border-radius: var(--radius-lg, 12px); padding: 28px 28px 24px; box-shadow: 0 8px 40px rgba(0,0,0,0.18); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.modal-close { background: none; border: none; font-size: 22px; color: var(--ink-3); cursor: pointer; line-height: 1; padding: 0 4px; }
+.modal-close:hover { color: var(--ink); }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+
+/* Secondary import button next to add-bullet */
+.s-input .bullet-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 18px; margin-left: 30px; }
+.s-input .bullet-actions .add-bullet { margin-top: 0; margin-left: 0; }
+.add-bullet-secondary { color: var(--ink-3) !important; font-size: 13px !important; }
+.add-bullet-secondary:hover { color: var(--ink-2) !important; }
+.add-bullet-secondary .plus { border-color: var(--ink-4, var(--ink-3)) !important; font-size: 11px !important; }
+
+@media (max-width: 500px) {
+  .modal { padding: 20px 16px 18px; }
+  .modal-actions { flex-direction: column-reverse; }
+  .modal-actions .btn { width: 100%; justify-content: center; }
+}
