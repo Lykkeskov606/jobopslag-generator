@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const { requireAdmin } = require('../middleware/requireAdmin');
 const { computeDailyMetrics } = require('../services/metrics');
+const { usdCentsToDkk } = require('../utils/currency');
 
 router.use(requireAdmin);
 
@@ -107,8 +108,14 @@ router.get('/operational', async (req, res, next) => {
       `, [days]),
     ]);
 
+    // cost_cents is USD-cents — convert to DKK/øre here so the frontend never
+    // needs to know the exchange rate (see utils/currency.js).
     res.json({
-      ai_cost: aiCost.rows,
+      ai_cost: aiCost.rows.map((r) => ({
+        ...r,
+        total_cost_dkk: usdCentsToDkk(r.total_cost_cents),
+        avg_cost_ore: r.avg_cost_cents == null ? null : usdCentsToDkk(r.avg_cost_cents) * 100,
+      })),
       latency: latency.rows[0],
       top_errors: topErrors.rows,
     });

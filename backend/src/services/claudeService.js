@@ -5,6 +5,9 @@ const db = require('../db');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = 'claude-sonnet-4-6';
+// USD-cents per token (Sonnet pricing: $3 / $15 per MTok) — ai_calls.cost_cents
+// is therefore USD-cents, NOT DKK-øre. Converted to DKK at display/budget time
+// via utils/currency.js (USD_TO_DKK_RATE).
 const COST_INPUT_CENTS_PER_TOKEN  = 0.0003;
 const COST_OUTPUT_CENTS_PER_TOKEN = 0.0015;
 

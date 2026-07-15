@@ -1,4 +1,5 @@
 const { Resend } = require('resend');
+const { usdCentsToDkk } = require('../utils/currency');
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
@@ -26,15 +27,17 @@ async function checkAndSendAlerts() {
   const today = new Date().toISOString().split('T')[0];
   const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-  // 1. Daily AI cost > threshold
-  const costThresholdCents = (parseFloat(process.env.AI_COST_ALERT_DKK) || 200) * 100;
+  // 1. Daily AI cost > threshold. cost_cents is USD-cents — convert to DKK
+  // before comparing against the DKK threshold (see utils/currency.js).
+  const costThresholdDkk = parseFloat(process.env.AI_COST_ALERT_DKK) || 200;
   const { rows: costRows } = await db.query(
     `SELECT COALESCE(SUM(cost_cents), 0) AS total FROM ai_calls WHERE created_at >= NOW() - INTERVAL '24 hours'`
   );
-  if (parseInt(costRows[0].total) > costThresholdCents) {
+  const spendDkk = usdCentsToDkk(costRows[0].total);
+  if (spendDkk > costThresholdDkk) {
     await sendAlert(
       'Daily AI cost exceeded threshold',
-      `AI spend last 24h: ${(costRows[0].total / 100).toFixed(2)} DKK (threshold: ${process.env.AI_COST_ALERT_DKK} DKK)`
+      `AI spend last 24h: ${spendDkk.toFixed(2)} DKK (threshold: ${costThresholdDkk} DKK)`
     );
   }
 

@@ -41,8 +41,8 @@ export function OperationalTab({ days }) {
           {data.ai_cost.map((row, i) => (
             <tr key={i}>
               <td>{row.output_type || 'unknown'}</td>
-              <td>{((row.total_cost_cents || 0) / 100).toFixed(2)}</td>
-              <td>{row.avg_cost_cents ?? '—'}</td>
+              <td>{(row.total_cost_dkk ?? 0).toFixed(2)}</td>
+              <td>{row.avg_cost_ore != null ? Math.round(row.avg_cost_ore) : '—'}</td>
               <td>{row.total_calls}</td>
             </tr>
           ))}
