@@ -167,6 +167,7 @@
     "step7Title": "Generate job posting",
     "step7Sub": "Review your foundation and generate 2 variants of the job posting.",
     "step7Generating": "Generating 2 variants…",
+    "step7Regenerate": "Generate 2 new variants",
     "step7GeneratingSub": "Calling Claude AI · Usually takes 10–20 seconds",
     "step7VariantsTitle": "2 variants generated",
     "step7SelectA": "Select Variant A",

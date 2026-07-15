@@ -93,6 +93,67 @@ router.get('/:projectId/outputs', async (req, res, next) => {
   }
 });
 
+// ── GET /api/tier2/:projectId/generated — latest AI outputs for state restore ─
+// Lets Step 7/8 rehydrate from project_outputs instead of re-generating on
+// every mount. Latest A and B are taken independently per variant so projects
+// predating generation_batch still restore.
+
+router.get('/:projectId/generated', async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    if (!(await isMember(projectId, req.user.id))) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const { rows: postingRows } = await db.query(
+      `SELECT DISTINCT ON (variant) variant, content, generation_batch
+       FROM project_outputs
+       WHERE project_id = $1 AND output_type = 'jobopslag'
+       ORDER BY variant, generated_at DESC`,
+      [projectId]
+    );
+    const byVariant = {};
+    let generationBatch = null;
+    for (const row of postingRows) {
+      byVariant[row.variant] = row.content;
+      if (row.generation_batch) generationBatch = row.generation_batch;
+    }
+
+    const { rows: stepRows } = await db.query(
+      `SELECT input_data FROM project_inputs WHERE project_id = $1 AND step_number = 7`,
+      [projectId]
+    );
+    const step7 = stepRows[0]?.input_data || {};
+
+    const { rows: docRows } = await db.query(
+      `SELECT DISTINCT ON (output_type) output_type, content
+       FROM project_outputs
+       WHERE project_id = $1 AND output_type IN ('candidate_profile', 'interview_guide')
+       ORDER BY output_type, generated_at DESC`,
+      [projectId]
+    );
+    const docs = {};
+    for (const row of docRows) docs[row.output_type] = row.content;
+
+    let guideItems = null;
+    if (docs.interview_guide) {
+      try { guideItems = JSON.parse(docs.interview_guide); } catch {}
+    }
+
+    res.json({
+      variant_a: byVariant.A || '',
+      variant_b: byVariant.B || '',
+      generation_batch: generationBatch,
+      selected_variant: step7.selected_variant || null,
+      final_content: step7.final_content || '',
+      candidate_profile: docs.candidate_profile || '',
+      interview_guide_items: guideItems,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── POST /api/tier2/save-step ─────────────────────────────────────────────────
 
 router.post('/save-step', async (req, res, next) => {
