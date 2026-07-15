@@ -1027,6 +1027,37 @@ function MixEditor({ variantA, variantB, value, onChange, language }) {
   );
 }
 
+// ─── Shared error/save helpers ────────────────────────────────────────────────
+
+// One automatic retry on failure, then log and report false. Never throws —
+// callers decide whether the user must confirm before proceeding without a save.
+async function postWithRetry(path, payload, label) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await api.post(path, payload);
+      return true;
+    } catch (err) {
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 800));
+        continue;
+      }
+      console.error(`${label} failed:`, err);
+      return false;
+    }
+  }
+  return false;
+}
+
+// Maps an axios error to a user-facing message; 429s get the specific
+// budget/rate-limit explanation instead of a generic failure.
+function aiErrorMessage(err, t, fallback) {
+  if (err?.response?.status === 429) {
+    const serverMsg = err.response?.data?.error || '';
+    return /daily/i.test(serverMsg) ? t('tier2.budgetExceeded') : t('tier2.rateLimited');
+  }
+  return fallback;
+}
+
 // ─── Step 7: Job posting generation ──────────────────────────────────────────
 
 function Step7JobPosting({ state, onBack, onComplete, onSkipCompleteness, t, project, da }) {
@@ -1054,6 +1085,7 @@ function Step7JobPosting({ state, onBack, onComplete, onSkipCompleteness, t, pro
   const [generationBatch, setGenerationBatch] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [finalContent, setFinalContent]     = useState('');
+  const [genError, setGenError]             = useState(null);
   const hasRestored = useRef(false);
 
   // Rehydrate from project_outputs before spending an AI call: navigating back
@@ -1101,8 +1133,13 @@ function Step7JobPosting({ state, onBack, onComplete, onSkipCompleteness, t, pro
       setGenerationBatch(data.generation_batch);
       setSubStep('results');
     } catch (err) {
-      if (err.response?.status === 422) setSubStep('refused');
-      else setSubStep('completeness');
+      if (err.response?.status === 422) {
+        setSubStep('refused');
+        return;
+      }
+      console.error('generate-job-posting failed:', err);
+      setGenError(aiErrorMessage(err, t, t('tier2.step7ErrorBody')));
+      setSubStep('error');
     }
   }
 
@@ -1113,17 +1150,16 @@ function Step7JobPosting({ state, onBack, onComplete, onSkipCompleteness, t, pro
   }
 
   async function handleSaveAndFinish() {
-    try {
-      await api.post('/tier2/save-step', {
-        project_id:  project.id,
-        step_number: 7,
-        input_data: {
-          selected_variant:  selectedVariant,
-          final_content:     finalContent,
-          generation_batch:  generationBatch,
-        },
-      });
-    } catch { /* non-fatal */ }
+    const saved = await postWithRetry('/tier2/save-step', {
+      project_id:  project.id,
+      step_number: 7,
+      input_data: {
+        selected_variant:  selectedVariant,
+        final_content:     finalContent,
+        generation_batch:  generationBatch,
+      },
+    }, 'tier2 save-step 7');
+    if (!saved && !window.confirm(t('tier2.saveFailedConfirm'))) return;
     onComplete();
   }
 
@@ -1189,6 +1225,30 @@ function Step7JobPosting({ state, onBack, onComplete, onSkipCompleteness, t, pro
             <button className="btn btn-secondary" onClick={() => setSubStep('completeness')}>
               <span className="arrow">←</span> {t('tier2.step7EditBack')}
             </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (subStep === 'error') {
+    return (
+      <div className="app">
+        <TopBar active="projects" />
+        <main>
+          <div className="work">
+            <section className="intro">
+              <h1>{t('tier2.step7ErrorTitle')}</h1>
+              <p style={{ color: 'var(--error, #c0392b)' }}>{genError}</p>
+            </section>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn btn-primary" onClick={() => generate([])}>
+                {t('tier2.retry')}
+              </button>
+              <button className="btn btn-secondary" onClick={() => setSubStep('completeness')}>
+                <span className="arrow">←</span> {t('tier2.step7EditBack')}
+              </button>
+            </div>
           </div>
         </main>
       </div>
@@ -1457,9 +1517,12 @@ function Step6Behaviors({ state, setState, onNext, onBack, t, project, da }) {
 
   async function handleNext() {
     if (!canContinue) return;
-    try {
-      await api.post('/tier2/save-behaviors', { project_id: project.id, patterns, selected });
-    } catch { /* non-fatal */ }
+    const saved = await postWithRetry(
+      '/tier2/save-behaviors',
+      { project_id: project.id, patterns, selected },
+      'tier2 save-behaviors'
+    );
+    if (!saved && !window.confirm(t('tier2.saveFailedConfirm'))) return;
     onNext();
   }
 
@@ -1704,9 +1767,10 @@ function Step8GenerateOutputs({ state, project, onBack, onComplete, t, da }) {
       const { data } = await api.post('/tier2/generate-candidate-profile', { project_id: project.id });
       setProfileContent(data.content);
     } catch (err) {
+      console.error('generate-candidate-profile failed:', err);
       setProfileError(err.response?.status === 422
         ? (da ? 'Indhold kan ikke genereres pga. indholdspolitik.' : 'Content cannot be generated due to content policy.')
-        : t('tier2.step8ErrorProfile')
+        : aiErrorMessage(err, t, t('tier2.step8ErrorProfile'))
       );
     } finally {
       setGenProfile(false);
@@ -1719,8 +1783,12 @@ function Step8GenerateOutputs({ state, project, onBack, onComplete, t, da }) {
     try {
       const { data } = await api.post('/tier2/generate-interview-guide', { project_id: project.id });
       setGuideItems(data.guide);
-    } catch {
-      setGuideError(t('tier2.step8ErrorGuide'));
+    } catch (err) {
+      console.error('generate-interview-guide failed:', err);
+      setGuideError(err.response?.status === 422
+        ? (da ? 'Indhold kan ikke genereres pga. indholdspolitik.' : 'Content cannot be generated due to content policy.')
+        : aiErrorMessage(err, t, t('tier2.step8ErrorGuide'))
+      );
     } finally {
       setGenGuide(false);
     }
@@ -2140,27 +2208,30 @@ export function Tier2Page({ project }) {
   }, []);
 
   async function saveStep(stepNumber, data) {
-    try {
-      await api.post('/tier2/save-step', {
-        project_id: project.id,
-        step_number: stepNumber,
-        input_data: data,
-      });
-    } catch {
-      // Non-fatal
-    }
+    return postWithRetry('/tier2/save-step', {
+      project_id: project.id,
+      step_number: stepNumber,
+      input_data: data,
+    }, `tier2 save-step ${stepNumber}`);
+  }
+
+  // Blocks advancement on save failure unless the user explicitly accepts
+  // continuing with unsaved data (later steps generate from what the server has).
+  async function saveStepOrConfirm(stepNumber, data) {
+    if (await saveStep(stepNumber, data)) return true;
+    return window.confirm(t('tier2.saveFailedConfirm'));
   }
 
   async function toStep2({ fromSkip = false } = {}) {
     const skipFlag = fromSkip || state.skipped;
-    await saveStep(1, { templateText: state.templateText, templateHtml: state.templateHtml, filename: state.templateFilename, skipped: skipFlag });
+    if (!(await saveStepOrConfirm(1, { templateText: state.templateText, templateHtml: state.templateHtml, filename: state.templateFilename, skipped: skipFlag }))) return;
     setAppStep(2);
   }
 
   async function toStep3(skippedIds = []) {
     const allSkipped = [...new Set([...(state.completenessSkipped || []), ...skippedIds])];
     setState((s) => ({ ...s, completenessSkipped: allSkipped }));
-    await saveStep(2, {
+    if (!(await saveStepOrConfirm(2, {
       jobTitle: state.jobTitle,
       bullets: state.bullets,
       location: state.location,
@@ -2171,7 +2242,7 @@ export function Tier2Page({ project }) {
       teamComposition: state.teamComposition,
       outputLanguage: state.outputLanguage,
       completenessSkipped: allSkipped,
-    });
+    }))) return;
     if (state.jobTitle.trim()) {
       api.patch(`/projects/${project.id}`, { name: state.jobTitle.trim() }).catch(() => {});
     }
@@ -2179,17 +2250,17 @@ export function Tier2Page({ project }) {
   }
 
   async function toStep4() {
-    await saveStep(3, { fitCriteria: state.fitCriteria });
+    if (!(await saveStepOrConfirm(3, { fitCriteria: state.fitCriteria }))) return;
     setAppStep(4);
   }
 
   async function toStep5() {
-    await saveStep(4, { requirements: state.requirements });
+    if (!(await saveStepOrConfirm(4, { requirements: state.requirements }))) return;
     setAppStep(5);
   }
 
   async function toStep6() {
-    await saveStep(5, { best: state.ja_best, worst: state.ja_worst, hidden: state.ja_hidden });
+    if (!(await saveStepOrConfirm(5, { best: state.ja_best, worst: state.ja_worst, hidden: state.ja_hidden }))) return;
     setAppStep(6);
   }
 
