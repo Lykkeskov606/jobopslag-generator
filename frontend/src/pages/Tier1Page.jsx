@@ -318,12 +318,22 @@ function MixEditor({ variantA, variantB, value, onChange, language }) {
 
 // ─── Input hash to guard against duplicate regeneration ──────────────────────
 
-function makeInputsHash(jobTitle, bullets, language, location, startDate, employmentType) {
+// Must cover every field that goes into the generation request — a field
+// missing here means "generate again" silently reuses the old output.
+function makeInputsHash({
+  jobTitle, bullets, language, location, startDate, employmentType,
+  extraBullets = [], workMode = '', department = '', teamComposition = '', templateFile = null,
+}) {
   return JSON.stringify({
     jt: jobTitle.trim(),
     bl: bullets.filter((b) => b.trim()),
+    xb: (extraBullets || []).filter((b) => b && b.trim()),
     la: language, lo: location.trim(),
     sd: startDate.trim(), et: employmentType,
+    wm: workMode.trim(),
+    dp: department.trim(),
+    tc: teamComposition.trim(),
+    tf: templateFile ? `${templateFile.name}:${templateFile.size}` : '',
   });
 }
 
@@ -449,10 +459,11 @@ export function Tier1Page({ project }) {
           setStep('results');
           if (data.inputs) {
             const inp = data.inputs;
-            lastGenHashRef.current = makeInputsHash(
-              inp.job_title || '', inp.bullets || [], inp.language || 'da',
-              inp.location || '', inp.start_date || '', inp.employment_type || '',
-            );
+            lastGenHashRef.current = makeInputsHash({
+              jobTitle: inp.job_title || '', bullets: inp.bullets || [], language: inp.language || 'da',
+              location: inp.location || '', startDate: inp.start_date || '', employmentType: inp.employment_type || '',
+              workMode: inp.work_mode || '',
+            });
           }
         }
         if (data.selection?.final_content) {
@@ -490,7 +501,11 @@ export function Tier1Page({ project }) {
 
   // Generate (called from checklist)
   async function doGenerate(extraBullets) {
-    const currentHash = makeInputsHash(jobTitle, bullets, language, location, startDate, employmentType);
+    const currentHash = makeInputsHash({
+      jobTitle, bullets, language, location, startDate, employmentType,
+      extraBullets: Array.isArray(extraBullets) ? extraBullets : [],
+      workMode, department, teamComposition, templateFile,
+    });
     if (lastGenHashRef.current === currentHash && variantA && variantB) {
       setStep('results');
       return;
