@@ -216,6 +216,18 @@
     "step9Finish": "Finish project",
     "step9Downloading": "Downloading…"
   },
+  "outputs": {
+    "sub": "Your finished documents. View them here, or download individually or as a ZIP.",
+    "emptySub": "This project has no finished documents yet.",
+    "empty": "No documents have been generated for this project yet. Complete the project steps to generate them.",
+    "openProject": "Open project",
+    "backToDashboard": "Back to dashboard",
+    "notFound": "Project not found",
+    "loadFailed": "The documents could not be loaded. Please try again.",
+    "downloadError": "Error — please try again.",
+    "show": "Show",
+    "hide": "Hide"
+  },
   "admin": {
     "title": "Admin Dashboard",
     "tabs": {

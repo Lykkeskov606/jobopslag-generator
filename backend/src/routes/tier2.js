@@ -57,6 +57,42 @@ router.get('/:projectId', async (req, res, next) => {
   }
 });
 
+// ── GET /api/tier2/:projectId/outputs — display-ready final documents ─────────
+// Same content resolution as the export endpoints, so what the user sees on
+// the outputs page is exactly what the downloads contain.
+
+router.get('/:projectId/outputs', async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    if (!(await isMember(projectId, req.user.id))) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const { steps, outputs, projectName } = await fetchAllDocData(projectId);
+    const step5 = steps[5] || {};
+    const step7 = steps[7] || {};
+    const language = (steps[2] || {}).outputLanguage || 'da';
+    const isDa = language === 'da';
+
+    const rawGuide = outputs['interview_guide']?.content || '[]';
+    let guideItems = [];
+    try { guideItems = JSON.parse(rawGuide); } catch {}
+
+    res.json({
+      project_name: projectName,
+      language,
+      documents: {
+        'job-analysis':      formatJobAnalysis(step5.best, step5.worst, step5.hidden, isDa),
+        'job-posting':       step7.final_content || outputs['jobopslag']?.content || '',
+        'candidate-profile': outputs['candidate_profile']?.content || '',
+        'interview-guide':   guideItems.length ? formatInterviewGuide(guideItems, isDa) : '',
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── POST /api/tier2/save-step ─────────────────────────────────────────────────
 
 router.post('/save-step', async (req, res, next) => {

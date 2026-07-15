@@ -407,6 +407,18 @@
     "step9Finish": "Afslut projekt",
     "step9Downloading": "Henter…"
   },
+  "outputs": {
+    "sub": "Dine færdige dokumenter. Se dem her, eller download enkeltvis eller samlet som ZIP.",
+    "emptySub": "Projektet har ingen færdige dokumenter endnu.",
+    "empty": "Der er ikke genereret dokumenter for dette projekt endnu. Gennemfør trinnene i projektet for at generere dem.",
+    "openProject": "Åbn projektet",
+    "backToDashboard": "Tilbage til dashboard",
+    "notFound": "Projekt ikke fundet",
+    "loadFailed": "Dokumenterne kunne ikke hentes. Prøv igen.",
+    "downloadError": "Fejl — prøv igen.",
+    "show": "Vis",
+    "hide": "Skjul"
+  },
   "admin": {
     "title": "Admin-dashboard",
     "backToApp": "← Tilbage til app",

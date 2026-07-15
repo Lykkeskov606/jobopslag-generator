@@ -4,6 +4,7 @@ import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AdminPage } from './pages/AdminPage';
 import { ProjectPage } from './pages/ProjectPage';
+import { OutputsPage } from './pages/OutputsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { AccountPage } from './pages/AccountPage';
@@ -39,6 +40,13 @@ export default function App() {
               </RequireAuth>
             }
           />
+          <Route path="/projects/:id/outputs" element={
+            <RequireAuth>
+              <ErrorBoundary>
+                <OutputsPage />
+              </ErrorBoundary>
+            </RequireAuth>
+          } />
           <Route path="/projects/:id" element={
             <RequireAuth>
               <ErrorBoundary>
