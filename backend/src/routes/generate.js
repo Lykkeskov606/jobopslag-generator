@@ -56,6 +56,7 @@ const tier1Schema = z.object({
   location: z.string().max(100).optional().default(''),
   start_date: z.string().max(50).optional().default(''),
   employment_type: z.string().max(50).optional().default(''),
+  work_mode: z.string().max(50).optional().default(''),
 });
 
 router.use(requireAuth);
@@ -156,7 +157,7 @@ router.post('/tier1', budgetGuard, aiLimiter, upload.single('template'), multerE
         error: zodErrorToMessage(parsed.error.issues, lang),
       });
     }
-    const { project_id, job_title, bullets, language, location, start_date, employment_type } = parsed.data;
+    const { project_id, job_title, bullets, language, location, start_date, employment_type, work_mode } = parsed.data;
 
     const { rows: member } = await db.query(
       `SELECT 1 FROM projects p
@@ -190,7 +191,7 @@ router.post('/tier1', budgetGuard, aiLimiter, upload.single('template'), multerE
        VALUES ($1, 2, $2, NOW())
        ON CONFLICT (project_id, step_number)
        DO UPDATE SET input_data = $2, updated_at = NOW()`,
-      [project_id, JSON.stringify({ job_title, bullets, language, location, start_date, employment_type, has_template: !!templateContent })]
+      [project_id, JSON.stringify({ job_title, bullets, language, location, start_date, employment_type, work_mode, has_template: !!templateContent })]
     );
 
     // Sync project language
@@ -202,7 +203,7 @@ router.post('/tier1', budgetGuard, aiLimiter, upload.single('template'), multerE
     // Generate with Claude
     const { variant_a, variant_b } = await generateJobPosting({
       jobTitle: job_title, bullets, language, templateContent, templateHtml,
-      location, startDate: start_date, employmentType: employment_type,
+      location, startDate: start_date, employmentType: employment_type, workMode: work_mode,
       projectId: project_id, userId: req.user.id,
     });
 

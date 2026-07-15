@@ -466,6 +466,7 @@ router.post('/generate-job-posting', budgetGuard, aiLimiter, async (req, res, ne
     const location       = step2.location || '';
     const startDate      = step2.startDate || '';
     const employmentType = step2.employmentType || '';
+    const workMode       = step2.workMode || '';
 
     const baseBullets = (step2.bullets || []).filter((b) => b?.trim());
     const bullets = [...baseBullets, ...extra_bullets.filter((b) => b?.trim())];
@@ -480,7 +481,7 @@ router.post('/generate-job-posting', budgetGuard, aiLimiter, async (req, res, ne
     const { variant_a, variant_b } = await generateJobPosting({
       jobTitle, bullets, language,
       templateContent, templateHtml,
-      location, startDate, employmentType,
+      location, startDate, employmentType, workMode,
       fitCriteria, candidateProfile, jobAnalysis, behaviorPatterns,
       projectId: project_id, userId: req.user.id,
     });

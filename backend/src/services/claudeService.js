@@ -380,7 +380,7 @@ async function callClaude(userMessage, promptFile, projectId, userId, stepNumber
 
 async function generateJobPosting({
   jobTitle, bullets, language, templateContent, templateHtml,
-  location, startDate, employmentType,
+  location, startDate, employmentType, workMode,
   fitCriteria, candidateProfile, jobAnalysis, behaviorPatterns,
   projectId, userId,
 }) {
@@ -396,6 +396,7 @@ async function generateJobPosting({
     location       && `${isDa ? 'Lokation'        : 'Location'}: ${location}`,
     startDate      && `${isDa ? 'Startdato'        : 'Start date'}: ${startDate}`,
     employmentType && `${isDa ? 'Ansættelsestype'  : 'Employment type'}: ${employmentType}`,
+    workMode       && `${isDa ? 'Arbejdsform'      : 'Work arrangement'}: ${workMode}`,
   ].filter(Boolean);
   const contextLines = contextParts.length ? contextParts.join('\n') : '';
 
