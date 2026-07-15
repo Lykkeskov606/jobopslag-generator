@@ -728,6 +728,11 @@ async function parseBulletsFromFreetext({ freetext, language, projectId, userId 
 
   const text = await callClaude(prompt, promptFile, projectId, userId, null);
 
+  // Refusal → graceful empty array. Uses REFUSAL_PATTERNS directly rather than
+  // isRefusal(): its <200-char heuristic assumes job-posting-length responses
+  // and would misfire on a short-but-valid bullets array.
+  if (REFUSAL_PATTERNS.some((p) => p.test(text))) return [];
+
   const cleaned = text.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
   const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
   if (!jsonMatch) return [];
